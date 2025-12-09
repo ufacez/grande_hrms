@@ -117,117 +117,134 @@ $user = getCurrentUser();
         </div>
     </div>
 
-    <!-- Include all modals from original HTML -->
-    <!-- View, Add/Edit, Blocklist, Delete modals -->
+    <!-- Employee Modal (Add/Edit) -->
+    <div id="employeeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Employee</h2>
+                <span class="close-modal" onclick="document.getElementById('employeeModal').style.display='none'">&times;</span>
+            </div>
+            <form id="employeeForm" onsubmit="saveEmployee(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Employee ID *</label>
+                        <input type="text" id="employeeId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="employeeName" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Position *</label>
+                        <input type="text" id="position" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Department *</label>
+                        <select id="department" required>
+                            <option value="Sales">Sales</option>
+                            <option value="Kitchen">Kitchen</option>
+                            <option value="Service">Service</option>
+                            <option value="Management">Management</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone *</label>
+                        <input type="tel" id="phone" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date Hired *</label>
+                        <input type="date" id="dateHired" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Birthdate *</label>
+                        <input type="date" id="birthdate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address *</label>
+                    <textarea id="address" rows="2" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Emergency Contact *</label>
+                        <input type="text" id="emergencyContact" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Emergency Phone *</label>
+                        <input type="tel" id="emergencyPhone" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Monthly Salary *</label>
+                        <input type="number" id="monthlySalary" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status *</label>
+                        <select id="status" required>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>SSS Number</label>
+                        <input type="text" id="sssNumber">
+                    </div>
+                    <div class="form-group">
+                        <label>TIN Number</label>
+                        <input type="text" id="tinNumber">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>PhilHealth Number</label>
+                    <input type="text" id="philhealthNumber">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="save-btn">Save Employee</button>
+                    <button type="button" class="cancel-btn" onclick="document.getElementById('employeeModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <button class="logout-btn" id="logoutBtn">
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+                <span class="close-modal close-logout">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+                <div class="form-buttons">
+                    <button id="confirmLogoutBtn" class="save-btn">Yes, Logout</button>
+                    <button class="cancel-btn close-logout">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/employees.js"></script>
     <script>
-        // API Base URL
-        const API_URL = '../api/employees.php';
-        
-        // Load employees from API instead of localStorage
-        async function loadEmployees() {
-            try {
-                const response = await fetch(`${API_URL}?action=list`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    employees = result.data;
-                    updateAnalytics();
-                    renderEmployees();
-                }
-            } catch (error) {
-                console.error('Error loading employees:', error);
-                showNotification('Failed to load employees', 'error');
-            }
-        }
-        
-        // Load statistics
-        async function updateAnalytics() {
-            try {
-                const response = await fetch(`${API_URL}?action=stats`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    const stats = result.data;
-                    document.getElementById('totalEmployees').textContent = stats.total_employees || 0;
-                    document.getElementById('activeEmployees').textContent = stats.active_employees || 0;
-                    document.getElementById('onLeaveEmployees').textContent = stats.on_leave || 0;
-                    document.getElementById('blocklistedEmployees').textContent = stats.blocklisted || 0;
-                }
-            } catch (error) {
-                console.error('Error loading statistics:', error);
-            }
-        }
-        
-        // Save employee (create or update)
-        async function saveEmployee(employeeData) {
-            const action = editingEmployeeId ? 'update' : 'create';
-            const method = editingEmployeeId ? 'PUT' : 'POST';
-            
-            try {
-                const response = await fetch(`${API_URL}?action=${action}`, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(employeeData)
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(result.message, 'success');
-                    loadEmployees();
-                    setTimeout(() => closeModal(), 1500);
-                } else {
-                    showNotification(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error saving employee:', error);
-                showNotification('Failed to save employee', 'error');
-            }
-        }
-        
-        // Delete employee
-        async function deleteEmployee(id) {
-            if (!confirm('Are you sure you want to delete this employee?')) return;
-            
-            try {
-                const response = await fetch(`${API_URL}?action=delete&id=${id}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(result.message, 'success');
-                    loadEmployees();
-                } else {
-                    showNotification(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting employee:', error);
-                showNotification('Failed to delete employee', 'error');
-            }
-        }
-        
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            loadEmployees();
-            
-            // ... rest of your existing JavaScript code
-            // Just replace localStorage operations with API calls
-        });
-        
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to logout?')) {
-                window.location.href = '../logout.php';
-            }
+        document.getElementById('confirmLogoutBtn').addEventListener('click', () => {
+            window.location.href = '../logout.php';
         });
     </script>
 </body>
