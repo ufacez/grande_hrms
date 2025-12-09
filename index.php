@@ -82,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="login-btn">LOGIN</button>
             </form>
             <p style="text-align: center; margin-top: 15px; font-size: 12px; color: #666;">
-                Default: admin / admin123
             </p>
         </div>
     </div>

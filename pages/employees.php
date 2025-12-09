@@ -100,11 +100,11 @@ $user = getCurrentUser();
                             <option value="On Leave">On Leave</option>
                             <option value="Blocklisted">Blocklisted</option>
                         </select>
-                        <button class="blocklisted-view-btn" onclick="showBlocklistedOnly()">
+                        <button class="blocklisted-view-btn" id="blocklistToggleBtn">
                             <i class="fas fa-ban"></i>
                             View Blocklisted
                         </button>
-                        <button class="add-btn" onclick="openAddModal()">
+                        <button class="add-btn" id="addEmployeeBtn">
                             <i class="fas fa-plus"></i>
                             Add Employee
                         </button>
@@ -122,13 +122,13 @@ $user = getCurrentUser();
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">Add New Employee</h2>
-                <span class="close-modal" onclick="document.getElementById('employeeModal').style.display='none'">&times;</span>
+                <span class="close-modal" id="closeModalBtn">&times;</span>
             </div>
-            <form id="employeeForm" onsubmit="saveEmployee(event)">
+            <form id="employeeForm">
                 <div class="form-row">
                     <div class="form-group">
                         <label>Employee ID *</label>
-                        <input type="text" id="employeeId" required>
+                        <input type="text" id="employeeId" required readonly style="background-color: #f5f5f5;">
                     </div>
                     <div class="form-group">
                         <label>Full Name *</label>
@@ -143,6 +143,7 @@ $user = getCurrentUser();
                     <div class="form-group">
                         <label>Department *</label>
                         <select id="department" required>
+                            <option value="">Select Department</option>
                             <option value="Sales">Sales</option>
                             <option value="Kitchen">Kitchen</option>
                             <option value="Service">Service</option>
@@ -152,8 +153,8 @@ $user = getCurrentUser();
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Email *</label>
-                        <input type="email" id="email" required>
+                        <label>Email</label>
+                        <input type="email" id="email">
                     </div>
                     <div class="form-group">
                         <label>Phone *</label>
@@ -166,28 +167,28 @@ $user = getCurrentUser();
                         <input type="date" id="dateHired" required>
                     </div>
                     <div class="form-group">
-                        <label>Birthdate *</label>
-                        <input type="date" id="birthdate" required>
+                        <label>Birthdate</label>
+                        <input type="date" id="birthdate">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Address *</label>
-                    <textarea id="address" rows="2" required></textarea>
+                    <label>Address</label>
+                    <textarea id="address" rows="2"></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Emergency Contact *</label>
-                        <input type="text" id="emergencyContact" required>
+                        <label>Emergency Contact</label>
+                        <input type="text" id="emergencyContact">
                     </div>
                     <div class="form-group">
-                        <label>Emergency Phone *</label>
-                        <input type="tel" id="emergencyPhone" required>
+                        <label>Emergency Phone</label>
+                        <input type="tel" id="emergencyPhone">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Monthly Salary *</label>
-                        <input type="number" id="monthlySalary" step="0.01" required>
+                        <input type="number" id="monthlySalary" step="0.01" required placeholder="0.00">
                     </div>
                     <div class="form-group">
                         <label>Status *</label>
@@ -201,20 +202,20 @@ $user = getCurrentUser();
                 <div class="form-row">
                     <div class="form-group">
                         <label>SSS Number</label>
-                        <input type="text" id="sssNumber">
+                        <input type="text" id="sssNumber" placeholder="Optional">
                     </div>
                     <div class="form-group">
                         <label>TIN Number</label>
-                        <input type="text" id="tinNumber">
+                        <input type="text" id="tinNumber" placeholder="Optional">
                     </div>
                 </div>
                 <div class="form-group">
                     <label>PhilHealth Number</label>
-                    <input type="text" id="philhealthNumber">
+                    <input type="text" id="philhealthNumber" placeholder="Optional">
                 </div>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn">Save Employee</button>
-                    <button type="button" class="cancel-btn" onclick="document.getElementById('employeeModal').style.display='none'">Cancel</button>
+                    <button type="button" class="cancel-btn" id="cancelModalBtn">Cancel</button>
                 </div>
             </form>
         </div>
@@ -242,10 +243,5 @@ $user = getCurrentUser();
     </div>
 
     <script src="../js/employees.js"></script>
-    <script>
-        document.getElementById('confirmLogoutBtn').addEventListener('click', () => {
-            window.location.href = '../logout.php';
-        });
-    </script>
 </body>
 </html>

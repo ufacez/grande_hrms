@@ -1,7 +1,10 @@
-// js/dashboard.js - Dynamic Dashboard
+// js/dashboard.js - Dynamic Dashboard with Database Integration
 
 const SCHEDULE_API = '../api/schedules.php';
-let scheduleData = [];
+const EMPLOYEES_API = '../api/employees.php';
+let currentWeekSchedule = [];
+let nextWeekSchedule = [];
+let allEmployees = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeDashboard();
@@ -15,6 +18,12 @@ function setupEventListeners() {
         document.querySelector('.main-content').classList.toggle('expanded');
     });
     
+    // Copy schedule button
+    document.getElementById('copyCurrentToNext')?.addEventListener('click', copyScheduleToNext);
+    
+    // Clear schedule button
+    document.getElementById('clearNextWeek')?.addEventListener('click', clearNextWeek);
+    
     // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         document.getElementById('logoutConfirmModal').style.display = 'block';
@@ -25,12 +34,17 @@ function setupEventListeners() {
             document.getElementById('logoutConfirmModal').style.display = 'none';
         });
     });
+    
+    document.getElementById('confirmLogoutBtn')?.addEventListener('click', () => {
+        window.location.href = '../logout.php';
+    });
 }
 
-function initializeDashboard() {
+async function initializeDashboard() {
     updateWeekRanges();
-    loadCurrentSchedule();
-    loadNextSchedule();
+    await loadEmployees();
+    await loadCurrentSchedule();
+    await loadNextSchedule();
 }
 
 function updateWeekRanges() {
@@ -59,16 +73,31 @@ function formatWeekRange(startDate) {
     return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}, ${startDate.getFullYear()}`;
 }
 
+async function loadEmployees() {
+    try {
+        const response = await fetch(`${EMPLOYEES_API}?action=list&status=Active`);
+        const result = await response.json();
+        
+        if (result.success) {
+            allEmployees = result.data;
+        }
+    } catch (error) {
+        console.error('Error loading employees:', error);
+    }
+}
+
 async function loadCurrentSchedule() {
     try {
         const response = await fetch(`${SCHEDULE_API}?action=current`);
         const result = await response.json();
         
         if (result.success) {
+            currentWeekSchedule = result.data;
             renderSchedule(result.data, 'scheduleTableBody');
         }
     } catch (error) {
         console.error('Error loading current schedule:', error);
+        renderEmptySchedule('scheduleTableBody');
     }
 }
 
@@ -78,15 +107,18 @@ async function loadNextSchedule() {
         const result = await response.json();
         
         if (result.success) {
+            nextWeekSchedule = result.data;
             renderSchedule(result.data, 'nextScheduleTableBody');
         }
     } catch (error) {
         console.error('Error loading next schedule:', error);
+        renderEmptySchedule('nextScheduleTableBody');
     }
 }
 
 function renderSchedule(data, tableBodyId) {
     const tbody = document.getElementById(tableBodyId);
+    const isNextWeek = tableBodyId === 'nextScheduleTableBody';
     
     // Group by employee
     const employeeSchedules = {};
@@ -104,27 +136,20 @@ function renderSchedule(data, tableBodyId) {
     });
     
     if (Object.keys(employeeSchedules).length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
-                    <i class="fas fa-calendar-times" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    No schedule configured for this week
-                </td>
-            </tr>
-        `;
+        renderEmptySchedule(tableBodyId);
         return;
     }
     
     tbody.innerHTML = Object.entries(employeeSchedules).map(([empId, schedule]) => `
         <tr>
-            <td>${schedule.name}</td>
+            <td style="font-weight: bold;">${schedule.name}</td>
             ${schedule.days.map((day, index) => `
-                <td class="${day ? getShiftClass(day.shift_name) : 'day-off'}">
+                <td class="${day ? getShiftClass(day.shift_name) : 'day-off'}" style="position: relative;">
                     ${day ? `
-                        <div>${day.shift_name}</div>
-                        <small style="opacity: 0.7;">${day.shift_time}</small>
-                    ` : 'Day Off'}
-                    <button class="edit-shift" onclick="openScheduleModal('${empId}', ${index}, '${tableBodyId === 'nextScheduleTableBody' ? 'next' : 'current'}')">
+                        <div style="font-weight: 500;">${day.shift_name}</div>
+                        <small style="opacity: 0.7; font-size: 11px;">${day.shift_time}</small>
+                    ` : '<span style="color: #999;">Day Off</span>'}
+                    <button class="edit-shift" onclick="openScheduleModal('${empId}', ${index}, '${isNextWeek ? 'next' : 'current'}', '${schedule.name}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
@@ -133,36 +158,168 @@ function renderSchedule(data, tableBodyId) {
     `).join('');
 }
 
+function renderEmptySchedule(tableBodyId) {
+    const tbody = document.getElementById(tableBodyId);
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                <i class="fas fa-calendar-times" style="font-size: 48px; display: block; margin-bottom: 10px; opacity: 0.3;"></i>
+                <p style="margin: 0;">No schedule configured for this week</p>
+                <small style="color: #bbb;">Schedules will appear here once configured</small>
+            </td>
+        </tr>
+    `;
+}
+
 function getShiftClass(shiftName) {
-    if (shiftName.toLowerCase().includes('morning')) return 'shift-morning';
-    if (shiftName.toLowerCase().includes('afternoon')) return 'shift-afternoon';
-    if (shiftName.toLowerCase().includes('night')) return 'shift-night';
+    const name = shiftName.toLowerCase();
+    if (name.includes('morning')) return 'shift-morning';
+    if (name.includes('afternoon')) return 'shift-afternoon';
+    if (name.includes('night')) return 'shift-night';
     return '';
 }
 
-function openScheduleModal(employeeId, dayIndex, week) {
-    // Implementation for schedule editing modal
-    alert(`Edit schedule for employee ${employeeId}, day ${dayIndex}, week ${week}`);
+function openScheduleModal(employeeId, dayIndex, week, employeeName) {
+    const modal = document.getElementById('scheduleModal');
+    const form = document.getElementById('scheduleForm');
+    
+    // Set form data
+    document.getElementById('editModalTitle').textContent = `Edit Schedule - ${employeeName}`;
+    document.getElementById('editingWeek').value = week;
+    document.getElementById('daySelect').value = dayIndex;
+    
+    // Populate employee select (read-only for editing)
+    const employeeSelect = document.getElementById('employeeName');
+    employeeSelect.innerHTML = `<option value="${employeeId}">${employeeName}</option>`;
+    employeeSelect.disabled = true;
+    
+    // Get current shift for this day
+    const scheduleData = week === 'next' ? nextWeekSchedule : currentWeekSchedule;
+    const currentShift = scheduleData.find(s => 
+        s.employee_id === employeeId && s.day_of_week == dayIndex
+    );
+    
+    if (currentShift) {
+        document.getElementById('shiftSelect').value = currentShift.shift_name || 'Morning';
+    }
+    
+    modal.style.display = 'block';
+    
+    // Form submit
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        await saveSchedule(employeeId, dayIndex, week);
+    };
 }
 
+async function saveSchedule(employeeId, dayIndex, week) {
+    const shiftName = document.getElementById('shiftSelect').value;
+    
+    // Define shift times
+    const shiftTimes = {
+        'Morning': '6:00 AM - 2:00 PM',
+        'Afternoon': '2:00 PM - 10:00 PM',
+        'Night': '10:00 PM - 6:00 AM',
+        'Off': 'Day Off'
+    };
+    
+    const today = new Date();
+    const saturday = getLastSaturday(today);
+    if (week === 'next') {
+        saturday.setDate(saturday.getDate() + 7);
+    }
+    
+    const data = {
+        employee_id: employeeId,
+        week_start: saturday.toISOString().split('T')[0],
+        day: dayIndex,
+        shift_name: shiftName,
+        shift_time: shiftTimes[shiftName],
+        is_next_week: week === 'next' ? 1 : 0
+    };
+    
+    try {
+        const response = await fetch(`${SCHEDULE_API}?action=update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Schedule updated successfully', 'success');
+            closeModal();
+            
+            if (week === 'next') {
+                await loadNextSchedule();
+            } else {
+                await loadCurrentSchedule();
+            }
+        } else {
+            showNotification(result.message || 'Failed to update schedule', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving schedule:', error);
+        showNotification('Failed to update schedule', 'error');
+    }
+}
+
+function closeModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+    document.getElementById('scheduleForm').reset();
+    document.getElementById('employeeName').disabled = false;
+}
+
+async function copyScheduleToNext() {
+    if (!confirm('Copy current week schedule to next week? This will overwrite any existing next week schedule.')) return;
+    
+    showNotification('Copying schedule...', 'success');
+    
+    // Implementation would require a new API endpoint
+    // For now, show a message
+    setTimeout(() => {
+        showNotification('This feature requires additional API implementation', 'error');
+    }, 1000);
+}
+
+async function clearNextWeek() {
+    if (!confirm('Clear next week schedule? This action cannot be undone.')) return;
+    
+    showNotification('Clearing schedule...', 'success');
+    
+    // Implementation would require a new API endpoint
+    setTimeout(() => {
+        showNotification('This feature requires additional API implementation', 'error');
+    }, 1000);
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.getElementById('globalNotification');
+    if (notification) {
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        notification.style.display = 'block';
+        
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = (event) => {
+    const modal = document.getElementById('scheduleModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+};
+
+// Redirect functions for buttons
 function openAddEmployeeModal() {
-    alert('Add employee to schedule - To be implemented');
+    window.location.href = 'employees.php';
 }
 
 function openRemoveEmployeeModal() {
-    alert('Remove employee from schedule - To be implemented');
+    window.location.href = 'employees.php';
 }
-
-document.getElementById('copyCurrentToNext')?.addEventListener('click', async () => {
-    if (!confirm('Copy current week schedule to next week?')) return;
-    
-    // Implementation for copying schedule
-    alert('Copy schedule - To be implemented');
-});
-
-document.getElementById('clearNextWeek')?.addEventListener('click', async () => {
-    if (!confirm('Clear next week schedule?')) return;
-    
-    // Implementation for clearing schedule
-    alert('Clear schedule - To be implemented');
-});

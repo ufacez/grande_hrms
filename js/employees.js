@@ -23,6 +23,37 @@ function setupEventListeners() {
     
     // Filter
     document.getElementById('filterStatus')?.addEventListener('change', renderEmployees);
+    
+    // Add Employee button
+    document.getElementById('addEmployeeBtn')?.addEventListener('click', openAddModal);
+    
+    // Modal close buttons
+    document.getElementById('closeModalBtn')?.addEventListener('click', closeEmployeeModal);
+    document.getElementById('cancelModalBtn')?.addEventListener('click', closeEmployeeModal);
+    
+    // Blocklist toggle button
+    document.getElementById('blocklistToggleBtn')?.addEventListener('click', showBlocklistedOnly);
+    
+    // Form submission
+    const form = document.getElementById('employeeForm');
+    if (form) {
+        form.addEventListener('submit', saveEmployee);
+    }
+    
+    // Logout
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        document.getElementById('logoutConfirmModal').style.display = 'block';
+    });
+    
+    document.querySelectorAll('.close-logout').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('logoutConfirmModal').style.display = 'none';
+        });
+    });
+    
+    document.getElementById('confirmLogoutBtn')?.addEventListener('click', () => {
+        window.location.href = '../logout.php';
+    });
 }
 
 async function loadEmployees() {
@@ -140,11 +171,35 @@ function renderEmployees() {
     `).join('');
 }
 
-function openAddModal() {
+async function openAddModal() {
     editingEmployeeId = null;
     document.getElementById('employeeModal').style.display = 'block';
     document.getElementById('modalTitle').textContent = 'Add New Employee';
     document.getElementById('employeeForm').reset();
+    
+    // Auto-generate Employee ID
+    const nextId = await generateEmployeeId();
+    document.getElementById('employeeId').value = nextId;
+    document.getElementById('employeeId').readOnly = true; // Keep it read-only to prevent changes
+}
+
+async function generateEmployeeId() {
+    // Find the highest existing employee ID
+    let maxNumber = 0;
+    
+    employees.forEach(emp => {
+        const match = emp.employee_id.match(/EMP(\d+)/);
+        if (match) {
+            const num = parseInt(match[1]);
+            if (num > maxNumber) {
+                maxNumber = num;
+            }
+        }
+    });
+    
+    // Generate next ID
+    const nextNumber = maxNumber + 1;
+    return `EMP${String(nextNumber).padStart(3, '0')}`;
 }
 
 function openEditModal(id) {
@@ -157,6 +212,7 @@ function openEditModal(id) {
     
     // Populate form
     document.getElementById('employeeId').value = employee.employee_id;
+    document.getElementById('employeeId').readOnly = true; // Can't change ID when editing
     document.getElementById('employeeName').value = employee.name;
     document.getElementById('position').value = employee.position;
     document.getElementById('department').value = employee.department;
@@ -174,6 +230,12 @@ function openEditModal(id) {
     document.getElementById('philhealthNumber').value = employee.philhealth_number || '';
 }
 
+function closeEmployeeModal() {
+    document.getElementById('employeeModal').style.display = 'none';
+    document.getElementById('employeeForm').reset();
+    editingEmployeeId = null;
+}
+
 async function saveEmployee(e) {
     e.preventDefault();
     
@@ -182,18 +244,18 @@ async function saveEmployee(e) {
         name: document.getElementById('employeeName').value,
         position: document.getElementById('position').value,
         department: document.getElementById('department').value,
-        email: document.getElementById('email').value,
+        email: document.getElementById('email').value || 'N/A',
         phone: document.getElementById('phone').value,
         date_hired: document.getElementById('dateHired').value,
-        birthdate: document.getElementById('birthdate').value,
-        address: document.getElementById('address').value,
-        emergency_contact: document.getElementById('emergencyContact').value,
-        emergency_phone: document.getElementById('emergencyPhone').value,
+        birthdate: document.getElementById('birthdate').value || '1990-01-01',
+        address: document.getElementById('address').value || 'N/A',
+        emergency_contact: document.getElementById('emergencyContact').value || 'N/A',
+        emergency_phone: document.getElementById('emergencyPhone').value || 'N/A',
         monthly_salary: document.getElementById('monthlySalary').value,
         status: document.getElementById('status').value,
-        sss_number: document.getElementById('sssNumber').value,
-        tin_number: document.getElementById('tinNumber').value,
-        philhealth_number: document.getElementById('philhealthNumber').value
+        sss_number: document.getElementById('sssNumber').value || null,
+        tin_number: document.getElementById('tinNumber').value || null,
+        philhealth_number: document.getElementById('philhealthNumber').value || null
     };
     
     const action = editingEmployeeId ? 'update' : 'create';
@@ -210,8 +272,8 @@ async function saveEmployee(e) {
         
         if (result.success) {
             showNotification(result.message, 'success');
-            document.getElementById('employeeModal').style.display = 'none';
-            loadEmployees();
+            closeEmployeeModal();
+            await loadEmployees();
         } else {
             showNotification(result.message, 'error');
         }
@@ -221,8 +283,13 @@ async function saveEmployee(e) {
     }
 }
 
+function viewEmployee(id) {
+    // Optional: Open a view modal or redirect to detail page
+    console.log('View employee:', id);
+}
+
 async function deleteEmployee(id) {
-    if (!confirm('Are you sure you want to delete this employee?')) return;
+    if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
     
     try {
         const response = await fetch(`${API_URL}?action=delete&id=${id}`, {
@@ -233,7 +300,7 @@ async function deleteEmployee(id) {
         
         if (result.success) {
             showNotification(result.message, 'success');
-            loadEmployees();
+            await loadEmployees();
         } else {
             showNotification(result.message, 'error');
         }
@@ -262,7 +329,7 @@ async function toggleBlocklist(id, blocklist) {
         
         if (result.success) {
             showNotification(result.message, 'success');
-            loadEmployees();
+            await loadEmployees();
         } else {
             showNotification(result.message, 'error');
         }
@@ -310,3 +377,11 @@ function showNotification(message, type = 'success') {
         notification.remove();
     }, 3000);
 }
+
+// Close modal when clicking outside
+window.onclick = (event) => {
+    const modal = document.getElementById('employeeModal');
+    if (event.target === modal) {
+        closeEmployeeModal();
+    }
+};

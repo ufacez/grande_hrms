@@ -57,11 +57,8 @@ $user = getCurrentUser();
                 <div class="schedule-header">
                     <h2>Current Week Schedule - <span id="weekRange"></span></h2>
                     <div class="schedule-actions">
-                        <button class="add-employee-btn" onclick="openAddEmployeeModal()">
-                            <i class="fas fa-user-plus"></i> Add Employee
-                        </button>
-                        <button class="remove-employee-btn" onclick="openRemoveEmployeeModal()">
-                            <i class="fas fa-user-minus"></i> Remove Employee
+                        <button class="add-employee-btn" onclick="window.location.href='employees.php'">
+                            <i class="fas fa-user-plus"></i> Manage Employees
                         </button>
                     </div>
                 </div>
@@ -131,12 +128,12 @@ $user = getCurrentUser();
                 <input type="hidden" id="editingWeek" value="current">
                 <div class="form-group">
                     <label for="employeeName">Employee</label>
-                    <select id="employeeName" required>
+                    <select id="employeeName" required disabled>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="daySelect">Day</label>
-                    <select id="daySelect" required>
+                    <select id="daySelect" required disabled>
                         <option value="0">Saturday</option>
                         <option value="1">Sunday</option>
                         <option value="2">Monday</option>
@@ -147,92 +144,17 @@ $user = getCurrentUser();
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="shiftTypeSelect">Shift Type</label>
-                    <select id="shiftTypeSelect" onchange="toggleCustomShift()">
-                        <option value="predefined">Predefined Shift</option>
-                        <option value="custom">Custom Shift</option>
-                    </select>
-                </div>
-                <div id="predefinedShiftGroup" class="form-group">
                     <label for="shiftSelect">Shift</label>
-                    <select id="shiftSelect">
-                        <option value="Morning">Morning Shift</option>
-                        <option value="Afternoon">Afternoon Shift</option>
-                        <option value="Night">Night Shift</option>
+                    <select id="shiftSelect" required>
+                        <option value="Morning">Morning Shift (6:00 AM - 2:00 PM)</option>
+                        <option value="Afternoon">Afternoon Shift (2:00 PM - 10:00 PM)</option>
+                        <option value="Night">Night Shift (10:00 PM - 6:00 AM)</option>
                         <option value="Off">Day Off</option>
                     </select>
-                </div>
-                <div id="customShiftGroup" style="display: none;">
-                    <div class="form-group">
-                        <label for="customShiftName">Shift Name</label>
-                        <input type="text" id="customShiftName" placeholder="e.g., Opening Shift">
-                    </div>
-                    <div class="form-group">
-                        <label for="startTime">Start Time</label>
-                        <input type="time" id="startTime">
-                    </div>
-                    <div class="form-group">
-                        <label for="endTime">End Time</label>
-                        <input type="time" id="endTime">
-                    </div>
-                    <div class="form-group">
-                        <label for="shiftColor">Shift Color</label>
-                        <input type="color" id="shiftColor" value="#222222">
-                    </div>
-                </div>
-                <div id="savedShiftsGroup" style="display: none;">
-                    <div class="form-group">
-                        <label for="savedShifts">Load Saved Shift</label>
-                        <select id="savedShifts" onchange="loadSelectedShift()">
-                        </select>
-                    </div>
-                    <button type="button" class="delete-shift-btn" onclick="deleteSelectedShift()">Delete Selected Shift</button>
                 </div>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn">Save</button>
                     <button type="button" class="cancel-btn" onclick="closeModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add Employee Modal -->
-    <div id="addEmployeeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Add Employee to Schedule</h2>
-                <span class="close-modal close-add-employee">&times;</span>
-            </div>
-            <form id="addEmployeeForm">
-                <div class="form-group">
-                    <label for="newEmployeeName">Employee Name</label>
-                    <input type="text" id="newEmployeeName" required placeholder="Enter employee name">
-                </div>
-                <div class="form-buttons">
-                    <button type="submit" class="save-btn">Add</button>
-                    <button type="button" class="cancel-btn close-add-employee">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Remove Employee Modal -->
-    <div id="removeEmployeeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Remove Employee from Schedule</h2>
-                <span class="close-modal close-remove-employee">&times;</span>
-            </div>
-            <div id="removeNotification" class="notification" style="display: none;"></div>
-            <form id="removeEmployeeForm">
-                <div class="form-group">
-                    <label for="removeEmployeeSelect">Select Employee</label>
-                    <select id="removeEmployeeSelect" required>
-                    </select>
-                </div>
-                <div class="form-buttons">
-                    <button type="submit" class="save-btn">Remove</button>
-                    <button type="button" class="cancel-btn close-remove-employee">Cancel</button>
                 </div>
             </form>
         </div>
@@ -259,11 +181,5 @@ $user = getCurrentUser();
     </button>
 
     <script src="../js/dashboard.js"></script>
-    <script>
-        // Update logout to use PHP logout
-        document.getElementById('confirmLogoutBtn').addEventListener('click', function() {
-            window.location.href = '../logout.php';
-        });
-    </script>
 </body>
 </html>
