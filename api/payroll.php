@@ -1,5 +1,5 @@
 <?php
-// api/payroll.php - Payroll Management API
+// api/payroll.php - Enhanced Payroll with Schedule-based Salary Calculation
 require_once '../config/config.php';
 requireLogin();
 
@@ -7,6 +7,12 @@ $database = new Database();
 $db = $database->connect();
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
+
+// Constants
+define('DAILY_RATE', 540);
+define('STANDARD_HOURS', 8);
+define('HOURLY_RATE', DAILY_RATE / STANDARD_HOURS); // 67.50
+define('OVERTIME_MULTIPLIER', 1.25);
 
 try {
     switch ($method) {
@@ -40,7 +46,6 @@ try {
                 jsonResponse(true, 'Payroll retrieved', $stmt->fetchAll());
                 
             } elseif ($action === 'periods') {
-                // Get available pay periods
                 $stmt = $db->query("
                     SELECT DISTINCT pay_period_start, pay_period_end
                     FROM payroll
@@ -71,7 +76,6 @@ try {
                 jsonResponse(true, 'Stats retrieved', $stmt->fetch());
                 
             } elseif ($action === 'generate') {
-                // Generate payroll for a period
                 $startDate = $_GET['start_date'];
                 $endDate = $_GET['end_date'];
                 
@@ -89,22 +93,32 @@ try {
                     $stmt->execute([$emp['employee_id'], $startDate, $endDate]);
                     
                     if ($stmt->rowCount() == 0) {
-                        // Calculate basic salary (monthly / 2 for semi-monthly)
-                        $basicSalary = $emp['monthly_salary'] / 2;
+                        // Calculate salary based on schedule
+                        $salary = calculateScheduleBasedSalary($db, $emp['employee_id'], $startDate, $endDate);
                         
                         $stmt = $db->prepare("
                             INSERT INTO payroll 
-                            (employee_id, pay_period_start, pay_period_end, basic_salary, gross_pay, net_pay, status)
-                            VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+                            (employee_id, pay_period_start, pay_period_end, basic_salary, 
+                             overtime_hours, overtime_rate, overtime_pay, gross_pay, 
+                             late_deductions, other_deductions, total_deductions, net_pay, status)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Configured')
                         ");
+                        
                         $stmt->execute([
                             $emp['employee_id'],
                             $startDate,
                             $endDate,
-                            $basicSalary,
-                            $basicSalary,
-                            $basicSalary
+                            $salary['basic_salary'],
+                            $salary['overtime_hours'],
+                            $salary['overtime_rate'],
+                            $salary['overtime_pay'],
+                            $salary['gross_pay'],
+                            $salary['late_deductions'],
+                            $salary['other_deductions'],
+                            $salary['total_deductions'],
+                            $salary['net_pay']
                         ]);
+                        
                         $generated[] = $emp['employee_id'];
                     }
                 }
@@ -120,16 +134,9 @@ try {
             if ($action === 'update') {
                 $data = json_decode(file_get_contents('php://input'), true);
                 
-                // Calculate overtime pay
                 $overtimePay = $data['overtime_hours'] * $data['overtime_rate'];
-                
-                // Calculate gross pay
                 $grossPay = $data['basic_salary'] + $overtimePay;
-                
-                // Calculate total deductions
                 $totalDeductions = $data['late_deductions'] + $data['other_deductions'];
-                
-                // Calculate net pay
                 $netPay = $grossPay - $totalDeductions;
                 
                 $stmt = $db->prepare("
@@ -168,7 +175,6 @@ try {
             $record = $stmt->fetch();
             
             if ($record) {
-                // Archive before delete
                 $stmt = $db->prepare("SELECT * FROM payroll WHERE payroll_id = ?");
                 $stmt->execute([$id]);
                 $payroll = $stmt->fetch();
@@ -184,7 +190,6 @@ try {
                     $_SESSION['user_id']
                 ]);
                 
-                // Delete
                 $stmt = $db->prepare("DELETE FROM payroll WHERE payroll_id = ?");
                 if ($stmt->execute([$id])) {
                     logAudit($db, 'payroll', 'Payroll Deleted', 
@@ -198,5 +203,110 @@ try {
 } catch (PDOException $e) {
     error_log($e->getMessage());
     jsonResponse(false, 'An error occurred');
+}
+
+// Helper function to calculate salary based on schedule
+function calculateScheduleBasedSalary($db, $employeeId, $startDate, $endDate) {
+    // Get employee schedules for the period
+    $stmt = $db->prepare("
+        SELECT * FROM schedules 
+        WHERE employee_id = ? 
+        AND week_start_date BETWEEN ? AND ?
+    ");
+    $stmt->execute([$employeeId, $startDate, $endDate]);
+    $schedules = $stmt->fetchAll();
+    
+    $workDays = 0;
+    $totalHours = 0;
+    $overtimeHours = 0;
+    
+    foreach ($schedules as $schedule) {
+        if ($schedule['shift_name'] !== 'Off' && $schedule['shift_name'] !== 'Day Off') {
+            $workDays++;
+            $hours = calculateShiftHours($schedule['shift_time']);
+            $totalHours += $hours;
+            
+            if ($hours > STANDARD_HOURS) {
+                $overtimeHours += ($hours - STANDARD_HOURS);
+            }
+        }
+    }
+    
+    // Calculate pay
+    $regularHours = $totalHours - $overtimeHours;
+    $basicSalary = $regularHours * HOURLY_RATE;
+    $overtimePay = $overtimeHours * HOURLY_RATE * OVERTIME_MULTIPLIER;
+    $grossPay = $basicSalary + $overtimePay;
+    
+    // Calculate deductions (SSS, PhilHealth, Pag-IBIG)
+    $sss = calculateSSS($grossPay);
+    $philHealth = calculatePhilHealth($grossPay);
+    $pagIbig = 100; // Standard
+    
+    $totalDeductions = $sss + $philHealth + $pagIbig;
+    $netPay = $grossPay - $totalDeductions;
+    
+    return [
+        'work_days' => $workDays,
+        'total_hours' => $totalHours,
+        'basic_salary' => round($basicSalary, 2),
+        'overtime_hours' => round($overtimeHours, 2),
+        'overtime_rate' => HOURLY_RATE * OVERTIME_MULTIPLIER,
+        'overtime_pay' => round($overtimePay, 2),
+        'gross_pay' => round($grossPay, 2),
+        'late_deductions' => 0,
+        'other_deductions' => round($totalDeductions, 2),
+        'total_deductions' => round($totalDeductions, 2),
+        'net_pay' => round($netPay, 2)
+    ];
+}
+
+function calculateShiftHours($shiftTime) {
+    if (empty($shiftTime) || $shiftTime === 'Day Off') return 0;
+    
+    // Parse shift time (e.g., "6:00 AM - 2:00 PM")
+    if (preg_match('/(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i', $shiftTime, $matches)) {
+        $startHour = (int)$matches[1];
+        $endHour = (int)$matches[4];
+        $startPeriod = strtoupper($matches[3]);
+        $endPeriod = strtoupper($matches[6]);
+        
+        // Convert to 24-hour format
+        if ($startPeriod === 'PM' && $startHour !== 12) $startHour += 12;
+        if ($startPeriod === 'AM' && $startHour === 12) $startHour = 0;
+        if ($endPeriod === 'PM' && $endHour !== 12) $endHour += 12;
+        if ($endPeriod === 'AM' && $endHour === 12) $endHour = 0;
+        
+        $hours = $endHour - $startHour;
+        if ($hours < 0) $hours += 24;
+        
+        return $hours;
+    }
+    
+    return STANDARD_HOURS;
+}
+
+function calculateSSS($grossPay) {
+    if ($grossPay < 3250) return 135;
+    if ($grossPay < 3750) return 157.50;
+    if ($grossPay < 4250) return 180;
+    if ($grossPay < 4750) return 202.50;
+    if ($grossPay < 5250) return 225;
+    if ($grossPay < 5750) return 247.50;
+    if ($grossPay < 6250) return 270;
+    if ($grossPay < 6750) return 292.50;
+    if ($grossPay < 7250) return 315;
+    if ($grossPay < 7750) return 337.50;
+    if ($grossPay < 8250) return 360;
+    if ($grossPay < 8750) return 382.50;
+    if ($grossPay < 9250) return 405;
+    return 450; // Simplified maximum
+}
+
+function calculatePhilHealth($grossPay) {
+    $monthlyEquivalent = $grossPay * 2;
+    $contribution = $monthlyEquivalent * 0.04;
+    $employeeShare = $contribution / 2;
+    return max(min($employeeShare, 1800), 200);
 }
 ?>

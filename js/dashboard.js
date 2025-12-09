@@ -1,6 +1,6 @@
 // js/dashboard.js - Dynamic Dashboard with Database Integration
 
-const SCHEDULE_API = '../api/schedules.php';
+const SCHEDULE_API = '../api/schedules_v2.php';
 const EMPLOYEES_API = '../api/employees.php';
 let currentWeekSchedule = [];
 let nextWeekSchedule = [];
@@ -275,23 +275,42 @@ async function copyScheduleToNext() {
     if (!confirm('Copy current week schedule to next week? This will overwrite any existing next week schedule.')) return;
     
     showNotification('Copying schedule...', 'success');
-    
-    // Implementation would require a new API endpoint
-    // For now, show a message
-    setTimeout(() => {
-        showNotification('This feature requires additional API implementation', 'error');
-    }, 1000);
+    try {
+        const response = await fetch(`${SCHEDULE_API}?action=copy`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Schedule copied to next week', 'success');
+            await loadNextSchedule();
+        } else {
+            showNotification(result.message || 'Failed to copy schedule', 'error');
+        }
+    } catch (err) {
+        console.error('Error copying schedule:', err);
+        showNotification('Failed to copy schedule', 'error');
+    }
 }
 
 async function clearNextWeek() {
     if (!confirm('Clear next week schedule? This action cannot be undone.')) return;
     
     showNotification('Clearing schedule...', 'success');
-    
-    // Implementation would require a new API endpoint
-    setTimeout(() => {
-        showNotification('This feature requires additional API implementation', 'error');
-    }, 1000);
+    try {
+        const response = await fetch(`${SCHEDULE_API}?action=clear`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Next week schedule cleared', 'success');
+            await loadNextSchedule();
+        } else {
+            showNotification(result.message || 'Failed to clear schedule', 'error');
+        }
+    } catch (err) {
+        console.error('Error clearing schedule:', err);
+        showNotification('Failed to clear schedule', 'error');
+    }
 }
 
 function showNotification(message, type = 'success') {
