@@ -1,0 +1,84 @@
+#deleteConfirmModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#deleteConfirmModal .modal-content {
+    background: rgb(50, 49, 48);
+    border-radius: 4px;
+    width: 300px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+#deleteConfirmModal .modal-header {
+    padding: 16px;
+    color: white;
+}
+
+#deleteConfirmModal .modal-header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: normal;
+    color: white;
+}
+
+#deleteConfirmModal .modal-body {
+    padding: 16px;
+    text-align: center;
+}
+
+#deleteConfirmModal .modal-body p {
+    margin: 0;
+    color: white;
+    font-size: 14px;
+}
+
+#deleteConfirmModal .form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px;
+}
+
+#deleteConfirmModal .ok-btn,
+#deleteConfirmModal .cancel-btn {
+    padding: 6px 20px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+#deleteConfirmModal .ok-btn {
+    background-color: rgb(230, 225, 229);
+    color: rgb(28, 27, 31);
+}
+
+#deleteConfirmModal .cancel-btn {
+    background-color: rgb(73, 69, 79);
+    color: white;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    background: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    display: none;
+}

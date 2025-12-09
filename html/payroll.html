@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll - Grande.</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/payroll.css">
+    <link rel="stylesheet" href="../css/custom-payroll.css">
+    <link rel="stylesheet" href="../css/delete-modal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> 
+    <link rel="stylesheet" href="../css/print-payslip.css">
+    <script src="../js/payroll.js" defer></script>
+   
+</head>
+
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+                <h2>Grande.</h2>
+            </div>
+            <div class="nav-items">
+                <a href="dashboard.html" class="nav-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+                <a href="employees.html" class="nav-item"><i class="fas fa-users"></i><span>Employees</span></a>
+                <a href="attendance.html" class="nav-item"><i class="fas fa-clock"></i><span>Attendance</span></a>
+                <a href="biometric.html" class="nav-item"><i class="fas fa-fingerprint"></i><span>Biometric</span></a>
+                <a href="payroll.html" class="nav-item active"><i class="fas fa-money-bill-wave"></i><span>Payroll</span></a>
+                <a href="report.html" class="nav-item"><i class="fas fa-file-alt"></i><span>Report</span></a>
+                <a href="settings.html" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Header -->
+            <div class="header">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" placeholder="Search employee..." class="search-input" id="searchInput">
+                </div>
+                <div class="user-profile">
+                    <span>Avery Libran</span>
+                    <div style="width: 40px; height: 40px; background-color: #ddd; border-radius: 50%;"></div>
+                </div>
+            </div>
+
+            <!-- Notification -->
+            <div id="notification" class="notification"></div>
+
+            <div class="section-header">
+                <h2>Payroll Management</h2>
+            </div>
+
+            <!-- Filters and Statistics -->
+            <div class="filters-container">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Payroll Period</label>
+                        <select id="payPeriod" class="period-select">
+                            <!-- Will be populated automatically -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Department</label>
+                        <select id="departmentFilter">
+                            <option value="">All Departments</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Kitchen">Kitchen</option>
+                            <option value="Service">Service</option>
+                            <option value="Management">Management</option>
+                        </select>
+                    </div>
+                    <button id="applyFilters" class="filter-btn">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </div>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-title">Total Payroll</div>
+                        <div class="stat-value" id="totalPayroll">₱0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Total Overtime</div>
+                        <div class="stat-value" id="totalOvertime">₱0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Total Deductions</div>
+                        <div class="stat-value" id="totalDeductions">₱0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="payrollTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Employee ID</th>
+                            <th style="width: 150px;">Name</th>
+                            <th style="width: 120px;">Position</th>
+                            <th style="width: 120px;">Department</th>
+                            <th style="width: 100px; text-align: right;">Basic Salary</th>
+                            <th style="width: 100px; text-align: right;">Overtime Pay</th>
+                            <th style="width: 100px; text-align: right;">Gross Pay</th>
+                            <th style="width: 100px; text-align: right;">Deductions</th>
+                            <th style="width: 100px; text-align: right;">Net Pay</th>
+                            <th style="width: 100px;">Status</th>
+                            <th style="width: 140px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payrollBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div id="confirmContent">
+                    <p>Are you sure you want to remove this employee from payroll?</p>
+                    <div class="form-buttons">
+                        <button class="ok-btn" id="confirmDeleteBtn">OK</button>
+                        <button class="cancel-btn" id="cancelDeleteBtn">Cancel</button>
+                    </div>
+                </div>
+                <div id="successContent" style="display: none;">
+                    <p>Employee has been removed from payroll</p>
+                    <div class="form-buttons">
+                        <button class="ok-btn" id="successOkBtn">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Payroll Details</h2>
+                <button class="close-modal" id="closeEditModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editEmployeeId">
+                    <div class="form-group">
+                        <label>Employee Name</label>
+                        <input type="text" id="editName" readonly>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Position</label>
+                            <input type="text" id="editPosition" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" id="editDepartment" readonly>
+                        </div>
+                    </div>
+                    <div class="section-title">Additional Pay</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Overtime Hours</label>
+                            <input type="number" id="editOvertimeHours" step="0.5" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Overtime Rate (₱/hour)</label>
+                            <input type="number" id="editOvertimeRate" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="section-title">Deductions</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Late Deductions (₱)</label>
+                            <input type="number" id="editLateDeductions" step="0.01" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Other Deductions (₱)</label>
+                            <input type="number" id="editOtherDeductions" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" id="cancelEditBtn">Cancel</button>
+                        <button type="submit" class="save-btn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payslip Modal -->
+    <div id="payslipModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Employee Payslip</h2>
+                <button class="close-modal" id="closePayslipModalBtn">&times;</button>
+            </div>
+            <div class="payslip" id="payslipContent"></div>
+        </div>
+    </div>
+
+    <button class="logout-btn" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+                <span class="close-modal close-logout">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+                <div class="form-buttons">
+                    <button id="confirmLogoutBtn" class="save-btn">Yes, Logout</button>
+                    <button class="cancel-btn close-logout">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <script>
+        let payrollData = [];
+        let currentPeriodFilter = null;
+
+        // Enhanced currency formatter with commas
+        function formatCurrency(amount) {
+            return '₱' + amount.toLocaleString('en-PH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Get current pay period based on today's date
+        function getCurrentPayPeriod() {
+            const today = new Date();
+            const day = today.getDate();
+            const month = today.getMonth();
+            const year = today.getFullYear();
+            
+            if (day <= 15) {
+                // First half of the month
+                return {
+                    start: new Date(year, month, 1),
+                    end: new Date(year, month, 15),
+                    label: 'first'
+                };
+            } else {
+                // Second half of the month
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                return {
+                    start: new Date(year, month, 16),
+                    end: new Date(year, month, lastDay),
+                    label: 'second'
+                };
+            }
+        }
+
+        // Generate pay period options automatically
+        function initializePayPeriodSelector() {
+            const today = new Date();
+            const select = document.getElementById('payPeriod');
+            const periods = [];
+            
+            // Generate last 6 pay periods (3 months)
+            for (let i = 0; i < 6; i++) {
+                const date = new Date(today.getFullYear(), today.getMonth(), 1);
+                date.setMonth(date.getMonth() - Math.floor(i / 2));
+                
+                const isFirstHalf = (i % 2 === 0);
+                const startDay = isFirstHalf ? 1 : 16;
+                const lastDay = isFirstHalf ? 15 : new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+                
+                const startDate = new Date(date.getFullYear(), date.getMonth(), startDay);
+                const endDate = new Date(date.getFullYear(), date.getMonth(), isFirstHalf ? 15 : lastDay);
+                
+                const monthName = startDate.toLocaleString('en-US', { month: 'short' });
+                const year = startDate.getFullYear();
+                
+                let label;
+                if (i === 0) {
+                    label = `Current Period (${monthName} ${startDay}-${lastDay}, ${year})`;
+                } else if (i === 1) {
+                    label = `Previous Period (${monthName} ${startDay}-${lastDay}, ${year})`;
+                } else {
+                    label = `${monthName} ${startDay}-${lastDay}, ${year}`;
+                }
+                
+                periods.push({
+                    value: `${year}-${date.getMonth() + 1}-${isFirstHalf ? '1' : '2'}`,
+                    label: label,
+                    startDate: startDate,
+                    endDate: endDate
+                });
+            }
+            
+            select.innerHTML = periods.map(p => 
+                `<option value="${p.value}">${p.label}</option>`
+            ).join('');
+            
+            return periods;
+        }
+
+        // Load employees from employee management system
+        function loadEmployeesFromStorage() {
+            const savedEmployees = localStorage.getItem('employees');
+            if (savedEmployees) {
+                try {
+                    const employees = JSON.parse(savedEmployees);
+                    return employees.map(emp => ({
+                        employeeId: emp.id,
+                        name: emp.name,
+                        position: emp.position,
+                        department: emp.department,
+                        email: emp.email,
+                        phone: emp.phone,
+                        dateHired: emp.dateHired,
+                        basicSalary: parseFloat(emp.salary) || 0,
+                        allowances: 0,
+                        overtimeHours: 0,
+                        overtimeRate: 0,
+                        overtimePay: 0,
+                        grossPay: parseFloat(emp.salary) || 0,
+                        lateDeductions: 0,
+                        otherDeductions: 0,
+                        deductions: 0,
+                        netPay: parseFloat(emp.salary) || 0,
+                        status: 'Pending Setup',
+                        isConfigured: false
+                    }));
+                } catch (e) {
+                    console.error('Error loading employees:', e);
+                }
+            }
+            return [];
+        }
+
+        // Initialize payroll data - Auto-sync from Employee Management
+        function initializePayrollData() {
+            const savedPayroll = localStorage.getItem('payrollData');
+            const employees = loadEmployeesFromStorage();
+
+            if (savedPayroll) {
+                payrollData = JSON.parse(savedPayroll);
+                
+                // Add new employees
+                employees.forEach(emp => {
+                    if (!payrollData.find(p => p.employeeId === emp.employeeId)) {
+                        payrollData.push(emp);
+                    }
+                });
+
+                // Update employee info
+                payrollData.forEach(payroll => {
+                    const emp = employees.find(e => e.employeeId === payroll.employeeId);
+                    if (emp) {
+                        payroll.name = emp.name;
+                        payroll.position = emp.position;
+                        payroll.department = emp.department;
+                        payroll.email = emp.email;
+                        payroll.phone = emp.phone;
+                        if (!payroll.isConfigured) {
+                            payroll.basicSalary = emp.basicSalary;
+                        }
+                    }
+                });
+
+                // Remove deleted employees
+                if (employees.length > 0) {
+                    payrollData = payrollData.filter(p => 
+                        employees.find(e => e.employeeId === p.employeeId)
+                    );
+                }
+            } else {
+                payrollData = employees;
+            }
+
+            savePayrollData();
+            renderPayrollTable();
+            updateStats();
+        }
+
+        function calculatePayrollValues(employee) {
+            const overtimePay = (employee.overtimeHours || 0) * (employee.overtimeRate || 0);
+            const grossPay = employee.basicSalary + employee.allowances + overtimePay;
+            const totalDeductions = (employee.lateDeductions || 0) + (employee.otherDeductions || 0);
+            const netPay = grossPay - totalDeductions;
+
+            employee.overtimePay = overtimePay;
+            employee.grossPay = grossPay;
+            employee.deductions = totalDeductions;
+            employee.netPay = netPay;
+        }
+
+        function savePayrollData() {
+            localStorage.setItem('payrollData', JSON.stringify(payrollData));
+        }
+
+        // Filter data based on search, department, and period
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const department = document.getElementById('departmentFilter').value;
+            
+            return payrollData.filter(emp => {
+                const matchesSearch = emp.name.toLowerCase().includes(searchTerm) || 
+                    emp.employeeId.toLowerCase().includes(searchTerm) ||
+                    emp.position.toLowerCase().includes(searchTerm);
+
+                const matchesDepartment = !department || emp.department === department;
+
+                return matchesSearch && matchesDepartment;
+            });
+        }
+
+        function updateStats() {
+            const filtered = filterData();
+            
+            const stats = filtered.reduce((acc, emp) => {
+                calculatePayrollValues(emp);
+                return {
+                    totalPayroll: acc.totalPayroll + emp.netPay,
+                    totalOvertime: acc.totalOvertime + emp.overtimePay,
+                    totalDeductions: acc.totalDeductions + emp.deductions
+                };
+            }, { totalPayroll: 0, totalOvertime: 0, totalDeductions: 0 });
+
+            document.getElementById('totalPayroll').textContent = formatCurrency(stats.totalPayroll);
+            document.getElementById('totalOvertime').textContent = formatCurrency(stats.totalOvertime);
+            document.getElementById('totalDeductions').textContent = formatCurrency(stats.totalDeductions);
+        }
+
+        function renderPayrollTable() {
+            const tbody = document.getElementById('payrollBody');
+            const filtered = filterData();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-inbox" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p style="color: #999;">No employees found in payroll</p>
+                            <small style="color: #bbb;">Employees will automatically appear here when added to the system</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(emp => {
+                calculatePayrollValues(emp);
+                
+                return `
+                    <tr>
+                        <td>${emp.employeeId}</td>
+                        <td>${emp.name}</td>
+                        <td>${emp.position}</td>
+                        <td>${emp.department}</td>
+                        <td style="text-align: right;">${formatCurrency(emp.basicSalary)}</td>
+                        <td style="text-align: right;"><strong style="color: #28a745;">${formatCurrency(emp.overtimePay)}</strong></td>
+                        <td style="text-align: right;"><strong>${formatCurrency(emp.grossPay)}</strong></td>
+                        <td style="text-align: right;">${formatCurrency(emp.deductions)}</td>
+                        <td style="text-align: right;"><strong style="color: #222;">${formatCurrency(emp.netPay)}</strong></td>
+                        <td><span class="status-badge status-${emp.isConfigured ? 'configured' : 'pending'}">${emp.isConfigured ? 'Configured' : 'Pending Setup'}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-edit" onclick="editPayroll('${emp.employeeId}')" title="Edit">
+                                    <i class="fas fa-edit"></i><span>Edit</span>
+                                </button>
+                                <button class="btn btn-payslip" onclick="generatePayslip('${emp.employeeId}')" title="Generate Payslip">
+                                    <i class="fas fa-file-invoice"></i><span>Payslip</span>
+                                </button>
+                                <button class="btn btn-delete" onclick="deletePayroll('${emp.employeeId}')" title="Delete">
+                                    <i class="fas fa-trash"></i><span>Delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function editPayroll(employeeId) {
+            const employee = payrollData.find(emp => emp.employeeId === employeeId);
+            if (!employee) return;
+
+            document.getElementById('editEmployeeId').value = employee.employeeId;
+            document.getElementById('editName').value = employee.name;
+            document.getElementById('editPosition').value = employee.position;
+            document.getElementById('editDepartment').value = employee.department;
+            document.getElementById('editOvertimeHours').value = employee.overtimeHours || 0;
+            document.getElementById('editOvertimeRate').value = employee.overtimeRate || 0;
+            document.getElementById('editLateDeductions').value = employee.lateDeductions || 0;
+            document.getElementById('editOtherDeductions').value = employee.otherDeductions || 0;
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function generatePayslip(employeeId) {
+            const employee = payrollData.find(emp => emp.employeeId === employeeId);
+            if (!employee) return;
+
+            calculatePayrollValues(employee);
+            const currentDate = new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'long', day: 'numeric' 
+            });
+
+            const payslipHTML = `
+                <div class="payslip-header">
+                    <h2>PAYSLIP</h2>
+                    <p>Pay Period: ${currentDate}</p>
+                </div>
+                <div class="payslip-info">
+                    <div class="info-group">
+                        <p><strong>Employee ID:</strong> ${employee.employeeId}</p>
+                        <p><strong>Name:</strong> ${employee.name}</p>
+                        <p><strong>Position:</strong> ${employee.position}</p>
+                        <p><strong>Department:</strong> ${employee.department || 'N/A'}</p>
+                    </div>
+                    <div class="info-group">
+                        <p><strong>Pay Date:</strong> ${currentDate}</p>
+                        <p><strong>Email:</strong> ${employee.email || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${employee.phone || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="payslip-details">
+                    <div class="section-title">EARNINGS</div>
+                    <div class="detail-row">
+                        <span>Basic Salary</span>
+                        <span>${formatCurrency(employee.basicSalary)}</span>
+                    </div>
+                    ${employee.overtimePay > 0 ? `
+                    <div class="detail-row">
+                        <span>Overtime Pay (${employee.overtimeHours}hrs × ${formatCurrency(employee.overtimeRate)}/hr)</span>
+                        <span>${formatCurrency(employee.overtimePay)}</span>
+                    </div>` : ''}
+                    <div class="detail-row" style="font-weight: 600; background-color: #f8f9fa;">
+                        <span>Gross Pay</span>
+                        <span>${formatCurrency(employee.grossPay)}</span>
+                    </div>
+                    <div class="section-title">DEDUCTIONS</div>
+                    ${employee.lateDeductions > 0 ? `
+                    <div class="detail-row">
+                        <span>Late Deductions</span>
+                        <span>${formatCurrency(employee.lateDeductions)}</span>
+                    </div>` : ''}
+                    ${employee.otherDeductions > 0 ? `
+                    <div class="detail-row">
+                        <span>Other Deductions</span>
+                        <span>${formatCurrency(employee.otherDeductions)}</span>
+                    </div>` : ''}
+                    ${employee.deductions > 0 ? `
+                    <div class="detail-row" style="font-weight: 600; background-color: #f8f9fa;">
+                        <span>Total Deductions</span>
+                        <span>${formatCurrency(employee.deductions)}</span>
+                    </div>` : '<div class="detail-row"><span>No Deductions</span><span>₱0.00</span></div>'}
+                    <div class="detail-row total">
+                        <span>NET PAY</span>
+                        <span>${formatCurrency(employee.netPay)}</span>
+                    </div>
+                </div>
+                <button class="print-btn" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Payslip
+                </button>
+            `;
+
+            document.getElementById('payslipContent').innerHTML = payslipHTML;
+            document.getElementById('payslipModal').style.display = 'block';
+        }
+
+        function deletePayroll(employeeId) {
+            window.employeeToDelete = employeeId;
+            document.getElementById('deleteConfirmModal').style.display = 'block';
+            document.getElementById('confirmContent').style.display = 'block';
+            document.getElementById('successContent').style.display = 'none';
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePayPeriodSelector();
+            initializePayrollData();
+
+            // Search and filter
+            document.getElementById('searchInput').addEventListener('input', () => {
+                renderPayrollTable();
+                updateStats();
+            });
+
+            document.getElementById('departmentFilter').addEventListener('change', () => {
+                renderPayrollTable();
+                updateStats();
+            });
+
+            document.getElementById('payPeriod').addEventListener('change', () => {
+                renderPayrollTable();
+                updateStats();
+            });
+
+            // Apply filters button
+            document.getElementById('applyFilters').addEventListener('click', () => {
+                renderPayrollTable();
+                updateStats();
+            });
+
+            // Edit form
+            document.getElementById('editForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const employeeId = document.getElementById('editEmployeeId').value;
+                const employee = payrollData.find(emp => emp.employeeId === employeeId);
+                
+                if (employee) {
+                    employee.overtimeHours = parseFloat(document.getElementById('editOvertimeHours').value) || 0;
+                    employee.overtimeRate = parseFloat(document.getElementById('editOvertimeRate').value) || 0;
+                    employee.lateDeductions = parseFloat(document.getElementById('editLateDeductions').value) || 0;
+                    employee.otherDeductions = parseFloat(document.getElementById('editOtherDeductions').value) || 0;
+                    employee.isConfigured = true;
+                    employee.status = 'Configured';
+                    
+                    calculatePayrollValues(employee);
+                    savePayrollData();
+                    renderPayrollTable();
+                    updateStats();
+                    
+                    document.getElementById('editModal').style.display = 'none';
+                    showNotification('Payroll details updated successfully!');
+                }
+            });
+
+            // Modal close buttons
+            document.getElementById('closeEditModalBtn').addEventListener('click', () => {
+                document.getElementById('editModal').style.display = 'none';
+            });
+
+            document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                document.getElementById('editModal').style.display = 'none';
+            });
+
+            document.getElementById('closePayslipModalBtn').addEventListener('click', () => {
+                document.getElementById('payslipModal').style.display = 'none';
+            });
+
+            // Delete modal
+            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+                if (window.employeeToDelete) {
+                    payrollData = payrollData.filter(emp => emp.employeeId !== window.employeeToDelete);
+                    savePayrollData();
+                    document.getElementById('confirmContent').style.display = 'none';
+                    document.getElementById('successContent').style.display = 'block';
+                }
+            });
+
+            document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+                document.getElementById('deleteConfirmModal').style.display = 'none';
+                window.employeeToDelete = null;
+            });
+
+            document.getElementById('successOkBtn').addEventListener('click', () => {
+                document.getElementById('deleteConfirmModal').style.display = 'none';
+                window.employeeToDelete = null;
+                renderPayrollTable();
+                updateStats();
+                showNotification('Employee removed from payroll successfully!');
+            });
+
+            // Sidebar toggle
+            document.getElementById('sidebarToggle').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+            });
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                document.getElementById('logoutConfirmModal').style.display = 'block';
+            });
+
+            const closeLogoutBtns = document.querySelectorAll('.close-logout');
+            closeLogoutBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('logoutConfirmModal').style.display = 'none';
+                });
+            });
+
+            document.getElementById('confirmLogoutBtn').addEventListener('click', () => {
+                window.location.href = '../index.html';
+            });
+
+            // Close modals on outside click
+            window.addEventListener('click', (event) => {
+                const editModal = document.getElementById('editModal');
+                const payslipModal = document.getElementById('payslipModal');
+                const deleteModal = document.getElementById('deleteConfirmModal');
+                const logoutModal = document.getElementById('logoutConfirmModal');
+                
+                if (event.target === editModal) editModal.style.display = 'none';
+                if (event.target === payslipModal) payslipModal.style.display = 'none';
+                if (event.target === deleteModal) {
+                    deleteModal.style.display = 'none';
+                    window.employeeToDelete = null;
+                }
+                if (event.target === logoutModal) logoutModal.style.display = 'none';
+            });
+        });
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            notification.offsetHeight;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

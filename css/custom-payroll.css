@@ -1,0 +1,102 @@
+/* Custom styles for payroll table and buttons */
+.table-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+#payrollTable {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+#payrollTable th,
+#payrollTable td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+#payrollTable th {
+    background: #f8f9fa;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Action buttons styling */
+.action-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 0.9;
+}
+
+.btn-edit {
+    background-color: #2196F3;
+}
+
+.btn-payslip {
+    background-color: #4CAF50;
+}
+
+.btn-delete {
+    background-color: #f44336;
+}
+
+/* Money columns alignment */
+#payrollTable td:nth-child(5),
+#payrollTable td:nth-child(6),
+#payrollTable td:nth-child(7),
+#payrollTable td:nth-child(8),
+#payrollTable td:nth-child(9) {
+    text-align: right;
+}
+
+/* Status badge */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: #fff3e0;
+    color: #ff9800;
+}
+
+.status-approved {
+    background-color: #e8f5e9;
+    color: #4CAF50;
+}
+
+/* Make sure the table scrolls horizontally on smaller screens */
+@media (max-width: 1200px) {
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #payrollTable {
+        min-width: 1200px;
+    }
+}

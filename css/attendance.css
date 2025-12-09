@@ -1,0 +1,896 @@
+/* ========================================
+   ATTENDANCE PAGE - COMPLETE CSS
+   ======================================== */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f2f2f2;
+    color: #111;
+}
+
+.dashboard {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ========================================
+   SIDEBAR & NAVIGATION
+   ======================================== */
+
+.sidebar { 
+    width: 250px; 
+    background: #fff; 
+    position: fixed; 
+    left: 0; 
+    top: 0; 
+    bottom: 0; 
+    transition: all 0.3s; 
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1); 
+    z-index: 1000; 
+    overflow-y: auto; 
+}
+
+.sidebar.collapsed { 
+    width: 60px; 
+}
+
+.sidebar-header { 
+    padding: 15px; 
+    border-bottom: 1px solid #eee; 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+}
+
+.sidebar-header h2 { 
+    margin: 0; 
+    color: #333; 
+    font-size: 24px; 
+    transition: opacity 0.3s; 
+    white-space: nowrap; 
+}
+
+.sidebar.collapsed .sidebar-header h2 {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.sidebar-toggle {
+    background: transparent;
+    border: none;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-toggle i {
+    font-size: 20px;
+    color: #666;
+}
+
+.nav-items {
+    padding: 20px 10px;
+}
+
+.nav-item {
+    padding: 12px 15px;
+    margin: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #666;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.nav-item i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.nav-item span {
+    transition: opacity 0.3s;
+}
+
+.sidebar.collapsed .nav-item span {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.nav-item:hover {
+    background: #f5f5f5;
+    color: #111;
+}
+
+.nav-item.active {
+    background: #eaeaea;
+    color: #111;
+}
+
+/* ========================================
+   MAIN CONTENT
+   ======================================== */
+
+.main-content {
+    margin-left: 250px;
+    transition: margin-left 0.3s;
+    padding: 20px;
+    min-height: 100vh;
+    width: calc(100% - 250px);
+}
+
+.main-content.expanded {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+/* ========================================
+   HEADER
+   ======================================== */
+
+.header {
+    background-color: #fff;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 35px 8px 40px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #222;
+    box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+    font-size: 14px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-profile span {
+    font-weight: 500;
+}
+
+/* ========================================
+   ATTENDANCE PAGE SPECIFIC STYLES
+   ======================================== */
+
+.attendance-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+}
+
+/* Export Action */
+.export-action {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 25px;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.action-button:hover {
+    background-color: #c82333;
+    transform: translateY(-1px);
+}
+
+.action-button i {
+    font-size: 16px;
+}
+
+/* Section Header */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.section-header h2 {
+    font-size: 20px;
+    color: #333;
+}
+
+/* Filter Group */
+.filter-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    cursor: pointer;
+    min-width: 140px;
+}
+
+.filter-select:hover {
+    border-color: #666;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #222;
+}
+
+.date-range-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.date-separator {
+    color: #666;
+    font-size: 14px;
+}
+
+.date-filter-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.date-filter-container i {
+    position: absolute;
+    left: 12px;
+    color: #666;
+    pointer-events: none;
+}
+
+.date-filter {
+    padding: 8px 12px 8px 35px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #fff;
+    color: #333;
+    min-width: 140px;
+    transition: all 0.3s ease;
+}
+
+.date-filter:hover {
+    border-color: #666;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.date-filter:focus {
+    outline: none;
+    border-color: #222;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.date-filter::-webkit-calendar-picker-indicator {
+    background: transparent;
+    cursor: pointer;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+.date-filter::-moz-calendar-picker-indicator {
+    background: transparent;
+    cursor: pointer;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+/* Attendance Stats */
+.attendance-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #eee;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.stat-icon.present {
+    background-color: #d4edda;
+    color: #28a745;
+}
+
+.stat-icon.absent {
+    background-color: #f8d7da;
+    color: #dc3545;
+}
+
+.stat-icon.late {
+    background-color: #fff3cd;
+    color: #ffc107;
+}
+
+.stat-icon.leave {
+    background-color: #d1ecf1;
+    color: #17a2b8;
+}
+
+.stat-info h3 {
+    font-size: 28px;
+    color: #111;
+    margin-bottom: 5px;
+}
+
+.stat-info p {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+}
+
+/* Attendance Table */
+.attendance-table-container {
+    overflow-x: auto;
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    min-width: 900px;
+}
+
+.attendance-table th,
+.attendance-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.attendance-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.attendance-table td {
+    font-size: 14px;
+    color: #111;
+}
+
+.attendance-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.status-badge.present {
+    background-color: #d4edda;
+    color: #28a745;
+}
+
+.status-badge.absent {
+    background-color: #f8d7da;
+    color: #dc3545;
+}
+
+.status-badge.late {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.on-leave {
+    background-color: #d1ecf1;
+    color: #17a2b8;
+}
+
+/* Action Buttons in Table */
+.table-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px 8px;
+    color: #666;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.icon-btn:hover {
+    color: #111;
+}
+
+.icon-btn.delete {
+    color: #dc3545;
+}
+
+.icon-btn.delete:hover {
+    color: #c82333;
+}
+
+/* ========================================
+   MODAL STYLES
+   ======================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 8px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #eee;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    margin: 0;
+    color: #222;
+}
+
+.close-modal {
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    background: none;
+    border: none;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #222;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.save-btn {
+    background-color: #222;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.save-btn:hover {
+    background-color: #111;
+}
+
+.cancel-btn {
+    background-color: #666;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.cancel-btn:hover {
+    background-color: #555;
+}
+
+/* History Modal Styles */
+.history-modal-content {
+    max-width: 800px;
+}
+
+.history-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.history-stat-item {
+    text-align: center;
+}
+
+.history-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.history-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: #111;
+}
+
+.history-value.present {
+    color: #28a745;
+}
+
+.history-value.absent {
+    color: #dc3545;
+}
+
+.history-value.late {
+    color: #ffc107;
+}
+
+.history-value.leave {
+    color: #17a2b8;
+}
+
+.history-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: #ddd;
+}
+
+.empty-state p {
+    font-size: 16px;
+}
+
+/* ========================================
+   LOGOUT BUTTON
+   ======================================== */
+
+.logout-btn {
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    background-color: #222;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 1100;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    background-color: #111;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 1024px) {
+    .attendance-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .main-content {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+    
+    .sidebar {
+        width: 60px;
+    }
+    
+    .sidebar-header h2,
+    .nav-item span {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 768px) {
+    .attendance-section {
+        padding: 15px;
+    }
+    
+    .attendance-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .date-filter {
+        width: 100%;
+    }
+    
+    .attendance-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .attendance-table {
+        min-width: 900px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 5% auto;
+    }
+    
+    .history-modal-content {
+        width: 95%;
+    }
+    
+    .history-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    .stat-info h3 {
+        font-size: 24px;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: 250px;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-container {
+        max-width: none;
+    }
+
+    .user-profile {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .history-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-actions {
+        flex-direction: column;
+        gap: 3px;
+    }
+    
+    .attendance-table th,
+    .attendance-table td {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    
+    .status-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 15px;
+    }
+
+    .form-buttons {
+        flex-direction: column;
+    }
+
+    .form-buttons button {
+        width: 100%;
+    }
+
+    .logout-btn {
+        left: 10px;
+        bottom: 10px;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}
