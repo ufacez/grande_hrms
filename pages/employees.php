@@ -1,10 +1,3 @@
-<?php
-// pages/employees.php
-require_once '../config/config.php';
-requireLogin();
-
-$user = getCurrentUser();
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +7,97 @@ $user = getCurrentUser();
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/employees.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Schedule Modal Styles */
+        #scheduleModal .modal-content {
+            max-width: 900px;
+        }
+        
+        .schedule-section {
+            margin-bottom: 30px;
+        }
+        
+        .schedule-section h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .schedule-table th,
+        .schedule-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .schedule-table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .schedule-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .schedule-edit-btn {
+            background-color: #222;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        .schedule-edit-btn:hover {
+            background-color: #111;
+        }
+        
+        .schedule-edit-btn i {
+            font-size: 12px;
+        }
+        
+        /* Schedule Edit Modal */
+        #scheduleEditModal .modal-content {
+            max-width: 500px;
+        }
+        
+        .day-name-display {
+            font-size: 18px;
+            font-weight: 600;
+            color: #222;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        /* Employee Card Schedule Icon */
+        .employee-card .icon-btn[title="Manage Schedule"] {
+            color: #17a2b8;
+        }
+        
+        .employee-card .icon-btn[title="Manage Schedule"]:hover {
+            color: #138496;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -40,7 +124,7 @@ $user = getCurrentUser();
                     <input type="text" id="searchInput" placeholder="Search employee by name or ID" class="search-input">
                 </div>
                 <div class="user-profile">
-                    <span><?php echo htmlspecialchars($user['full_name']); ?></span>
+                    <span>Admin User</span>
                     <div style="width: 40px; height: 40px; background-color: #ddd; border-radius: 50%;"></div>
                 </div>
             </div>
@@ -216,6 +300,94 @@ $user = getCurrentUser();
                 <div class="form-buttons">
                     <button type="submit" class="save-btn">Save Employee</button>
                     <button type="button" class="cancel-btn" id="cancelModalBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Schedule Management Modal -->
+    <div id="scheduleModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Schedule - <span id="scheduleEmployeeName"></span></h2>
+                <span class="close-modal" id="closeScheduleModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="schedule-section">
+                    <h3>
+                        <i class="fas fa-calendar-week"></i>
+                        Current Week Schedule
+                    </h3>
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Shift</th>
+                                <th>Time</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="currentWeekScheduleBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="schedule-section">
+                    <h3>
+                        <i class="fas fa-calendar-plus"></i>
+                        Next Week Schedule
+                    </h3>
+                    <table class="schedule-table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Shift</th>
+                                <th>Time</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nextWeekScheduleBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="form-buttons">
+                    <button type="button" class="cancel-btn" id="cancelScheduleBtn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Edit Modal -->
+    <div id="scheduleEditModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Schedule</h2>
+                <span class="close-modal" onclick="closeScheduleEditModal()">&times;</span>
+            </div>
+            <form id="scheduleEditForm" onsubmit="saveSchedule(event)">
+                <input type="hidden" id="editDayWeek">
+                <input type="hidden" id="editDayIndex">
+                <input type="hidden" id="editDayEmployee">
+                
+                <div class="day-name-display">
+                    <i class="fas fa-calendar-day"></i>
+                    <span id="editDayName"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editShiftSelect">Shift *</label>
+                    <select id="editShiftSelect" required>
+                        <option value="Morning">Morning Shift (6:00 AM - 2:00 PM)</option>
+                        <option value="Afternoon">Afternoon Shift (2:00 PM - 10:00 PM)</option>
+                        <option value="Night">Night Shift (10:00 PM - 6:00 AM)</option>
+                        <option value="Off">Day Off</option>
+                    </select>
+                </div>
+                
+                <div class="form-buttons">
+                    <button type="submit" class="save-btn">Save Schedule</button>
+                    <button type="button" class="cancel-btn" onclick="closeScheduleEditModal()">Cancel</button>
                 </div>
             </form>
         </div>

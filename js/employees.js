@@ -1,9 +1,11 @@
-// js/employees.js - Dynamic Employee Management
+// js/employees-schedule.js - Enhanced Employee Management with Schedule
 
 const API_URL = '../api/employees.php';
+const SCHEDULE_API = '../api/schedules.php';
 let employees = [];
 let editingEmployeeId = null;
 let viewingBlocklisted = false;
+let currentScheduleEmployee = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,6 +33,10 @@ function setupEventListeners() {
     document.getElementById('closeModalBtn')?.addEventListener('click', closeEmployeeModal);
     document.getElementById('cancelModalBtn')?.addEventListener('click', closeEmployeeModal);
     
+    // Schedule modal close buttons
+    document.getElementById('closeScheduleModalBtn')?.addEventListener('click', closeScheduleModal);
+    document.getElementById('cancelScheduleBtn')?.addEventListener('click', closeScheduleModal);
+    
     // Blocklist toggle button
     document.getElementById('blocklistToggleBtn')?.addEventListener('click', showBlocklistedOnly);
     
@@ -38,6 +44,12 @@ function setupEventListeners() {
     const form = document.getElementById('employeeForm');
     if (form) {
         form.addEventListener('submit', saveEmployee);
+    }
+    
+    // Schedule form submission
+    const scheduleForm = document.getElementById('scheduleForm');
+    if (scheduleForm) {
+        scheduleForm.addEventListener('submit', saveSchedule);
     }
     
     // Logout
@@ -127,6 +139,9 @@ function renderEmployees() {
                     <div style="color: #888; font-size: 13px;">${emp.employee_id}</div>
                 </div>
                 <div class="employee-actions" onclick="event.stopPropagation()">
+                    <button class="icon-btn" onclick="openScheduleModal('${emp.employee_id}', '${emp.name}')" title="Manage Schedule">
+                        <i class="fas fa-calendar-alt"></i>
+                    </button>
                     <button class="icon-btn" onclick="openEditModal('${emp.employee_id}')" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -171,20 +186,199 @@ function renderEmployees() {
     `).join('');
 }
 
+async function openScheduleModal(employeeId, employeeName) {
+    currentScheduleEmployee = employeeId;
+    document.getElementById('scheduleEmployeeName').textContent = employeeName;
+    document.getElementById('scheduleModal').style.display = 'block';
+    
+    await loadEmployeeSchedule(employeeId);
+}
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+    currentScheduleEmployee = null;
+}
+
+async function loadEmployeeSchedule(employeeId) {
+    try {
+        // Load current week schedule
+        const currentResponse = await fetch(`${SCHEDULE_API}?action=current`);
+        const currentResult = await currentResponse.json();
+        
+        // Load next week schedule
+        const nextResponse = await fetch(`${SCHEDULE_API}?action=next`);
+        const nextResult = await nextResponse.json();
+        
+        if (currentResult.success && nextResult.success) {
+            renderEmployeeSchedule(employeeId, currentResult.data, nextResult.data);
+        }
+    } catch (error) {
+        console.error('Error loading schedule:', error);
+        showNotification('Failed to load schedule', 'error');
+    }
+}
+
+function renderEmployeeSchedule(employeeId, currentData, nextData) {
+    const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    
+    // Filter schedules for this employee
+    const currentSchedule = currentData.filter(s => s.employee_id === employeeId);
+    const nextSchedule = nextData.filter(s => s.employee_id === employeeId);
+    
+    // Create arrays indexed by day_of_week
+    const currentDays = Array(7).fill(null);
+    const nextDays = Array(7).fill(null);
+    
+    currentSchedule.forEach(s => {
+        currentDays[s.day_of_week] = s;
+    });
+    
+    nextSchedule.forEach(s => {
+        nextDays[s.day_of_week] = s;
+    });
+    
+    // Render current week
+    const currentBody = document.getElementById('currentWeekScheduleBody');
+    currentBody.innerHTML = days.map((day, index) => {
+        const shift = currentDays[index];
+        return `
+            <tr>
+                <td style="font-weight: 500;">${day}</td>
+                <td>${shift ? shift.shift_name : 'Not Set'}</td>
+                <td>${shift ? shift.shift_time : '-'}</td>
+                <td>
+                    <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'current')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Render next week
+    const nextBody = document.getElementById('nextWeekScheduleBody');
+    nextBody.innerHTML = days.map((day, index) => {
+        const shift = nextDays[index];
+        return `
+            <tr>
+                <td style="font-weight: 500;">${day}</td>
+                <td>${shift ? shift.shift_name : 'Not Set'}</td>
+                <td>${shift ? shift.shift_time : '-'}</td>
+                <td>
+                    <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'next')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function editScheduleDay(employeeId, dayIndex, week) {
+    const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    
+    document.getElementById('editDayWeek').value = week;
+    document.getElementById('editDayIndex').value = dayIndex;
+    document.getElementById('editDayEmployee').value = employeeId;
+    document.getElementById('editDayName').textContent = days[dayIndex];
+    
+    document.getElementById('scheduleEditModal').style.display = 'block';
+}
+
+function closeScheduleEditModal() {
+    document.getElementById('scheduleEditModal').style.display = 'none';
+    document.getElementById('scheduleEditForm').reset();
+}
+
+async function saveSchedule(e) {
+    e.preventDefault();
+    
+    const week = document.getElementById('editDayWeek').value;
+    const dayIndex = parseInt(document.getElementById('editDayIndex').value);
+    const employeeId = document.getElementById('editDayEmployee').value;
+    const shiftName = document.getElementById('editShiftSelect').value;
+    
+    // Define shift times
+    const shiftTimes = {
+        'Morning': '6:00 AM - 2:00 PM',
+        'Afternoon': '2:00 PM - 10:00 PM',
+        'Night': '10:00 PM - 6:00 AM',
+        'Off': 'Day Off'
+    };
+    
+    const today = new Date();
+    const saturday = getLastSaturday(today);
+    if (week === 'next') {
+        saturday.setDate(saturday.getDate() + 7);
+    }
+    
+    const data = {
+        employee_id: employeeId,
+        week_start: saturday.toISOString().split('T')[0],
+        day: dayIndex,
+        shift_name: shiftName,
+        shift_time: shiftTimes[shiftName],
+        is_next_week: week === 'next' ? 1 : 0
+    };
+    
+    console.log('Saving schedule with data:', data); // Debug log
+    
+    try {
+        const response = await fetch(`${SCHEDULE_API}?action=update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        console.log('Schedule save result:', result); // Debug log
+        
+        if (result.success) {
+            showNotification('Schedule updated successfully! Check the dashboard to see changes.', 'success');
+            closeScheduleEditModal();
+            await loadEmployeeSchedule(employeeId);
+        } else {
+            showNotification(result.message || 'Failed to update schedule', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving schedule:', error);
+        showNotification('Failed to update schedule', 'error');
+    }
+}
+
+function getLastSaturday(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    
+    // Calculate days to subtract to get to last Saturday
+    // If today is Saturday (6), use today
+    // Otherwise, go back to last Saturday
+    let daysToSubtract;
+    if (day === 6) {
+        daysToSubtract = 0; // Already Saturday
+    } else if (day === 0) {
+        daysToSubtract = 1; // Sunday, go back 1 day
+    } else {
+        daysToSubtract = day + 1; // Monday(1)→2 days back, Tuesday(2)→3 days back, etc.
+    }
+    
+    d.setDate(d.getDate() - daysToSubtract);
+    return d;
+}
+
 async function openAddModal() {
     editingEmployeeId = null;
     document.getElementById('employeeModal').style.display = 'block';
     document.getElementById('modalTitle').textContent = 'Add New Employee';
     document.getElementById('employeeForm').reset();
     
-    // Auto-generate Employee ID
     const nextId = await generateEmployeeId();
     document.getElementById('employeeId').value = nextId;
-    document.getElementById('employeeId').readOnly = true; // Keep it read-only to prevent changes
+    document.getElementById('employeeId').readOnly = true;
 }
 
 async function generateEmployeeId() {
-    // Find the highest existing employee ID
     let maxNumber = 0;
     
     employees.forEach(emp => {
@@ -197,7 +391,6 @@ async function generateEmployeeId() {
         }
     });
     
-    // Generate next ID
     const nextNumber = maxNumber + 1;
     return `EMP${String(nextNumber).padStart(3, '0')}`;
 }
@@ -210,9 +403,8 @@ function openEditModal(id) {
     document.getElementById('employeeModal').style.display = 'block';
     document.getElementById('modalTitle').textContent = 'Edit Employee';
     
-    // Populate form
     document.getElementById('employeeId').value = employee.employee_id;
-    document.getElementById('employeeId').readOnly = true; // Can't change ID when editing
+    document.getElementById('employeeId').readOnly = true;
     document.getElementById('employeeName').value = employee.name;
     document.getElementById('position').value = employee.position;
     document.getElementById('department').value = employee.department;
@@ -284,7 +476,6 @@ async function saveEmployee(e) {
 }
 
 function viewEmployee(id) {
-    // Optional: Open a view modal or redirect to detail page
     console.log('View employee:', id);
 }
 
@@ -357,7 +548,6 @@ function showBlocklistedOnly() {
 }
 
 function showNotification(message, type = 'success') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
@@ -378,10 +568,29 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Close modal when clicking outside
+// Close modals when clicking outside
 window.onclick = (event) => {
-    const modal = document.getElementById('employeeModal');
-    if (event.target === modal) {
+    const employeeModal = document.getElementById('employeeModal');
+    const scheduleModal = document.getElementById('scheduleModal');
+    const scheduleEditModal = document.getElementById('scheduleEditModal');
+    
+    if (event.target === employeeModal) {
         closeEmployeeModal();
     }
+    if (event.target === scheduleModal) {
+        closeScheduleModal();
+    }
+    if (event.target === scheduleEditModal) {
+        closeScheduleEditModal();
+    }
 };
+
+// Make functions global
+window.openScheduleModal = openScheduleModal;
+window.editScheduleDay = editScheduleDay;
+window.openEditModal = openEditModal;
+window.toggleBlocklist = toggleBlocklist;
+window.deleteEmployee = deleteEmployee;
+window.viewEmployee = viewEmployee;
+window.closeScheduleEditModal = closeScheduleEditModal;
+window.saveSchedule = saveSchedule;
