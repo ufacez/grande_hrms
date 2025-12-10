@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 09, 2025 at 04:40 PM
+-- Generation Time: Dec 11, 2025 at 12:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -55,17 +55,6 @@ CREATE TABLE `attendance_records` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `attendance_records`
---
-
-INSERT INTO `attendance_records` (`attendance_id`, `employee_id`, `attendance_date`, `time_in`, `time_out`, `status`, `hours_worked`, `remarks`, `created_at`, `updated_at`) VALUES
-(1, 'EMP001', '2025-12-09', '08:00:00', '17:00:00', 'Present', 9.00, '', '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-(2, 'EMP002', '2025-12-09', '08:15:00', '17:10:00', 'Late', 8.92, 'Traffic', '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-(3, 'EMP003', '2025-12-09', '08:05:00', '17:00:00', 'Present', 8.92, '', '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-(4, 'EMP004', '2025-12-09', NULL, NULL, 'Absent', 0.00, 'Sick', '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-(5, 'EMP005', '2025-12-09', '08:00:00', '17:00:00', 'Present', 9.00, '', '2025-12-09 15:12:48', '2025-12-09 15:12:48');
 
 -- --------------------------------------------------------
 
@@ -154,17 +143,6 @@ CREATE TABLE `employees` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `employees`
---
-
-INSERT INTO `employees` (`employee_id`, `name`, `position`, `department`, `email`, `phone`, `date_hired`, `birthdate`, `address`, `emergency_contact`, `emergency_phone`, `monthly_salary`, `status`, `sss_number`, `tin_number`, `philhealth_number`, `blocklist_reason`, `created_at`, `updated_at`) VALUES
-('EMP001', 'Bern Saez', 'Barista', 'Service', 'bern.saez@grande.com', '09171234567', '2023-01-15', '1995-03-20', '123 Main St, Quezon City', 'Maria Saez', '09181234567', 18000.00, 'Active', '12-3456789-0', '123-456-789-000', 'PH-123456789', NULL, '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-('EMP002', 'Earl Espiritu', 'Barista', 'Kitchen', 'earl.espiritu@grande.com', '09171234568', '2023-02-01', '1996-05-15', '456 Second St, Manila', 'Anna Espiritu', '09181234568', 17000.00, 'Active', '12-3456789-1', '123-456-789-001', 'PH-123456790', NULL, '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-('EMP003', 'Lee Bornoz', 'Barista', 'Sales', 'lee.bornoz@grande.com', '09171234569', '2023-03-10', '1994-08-22', '789 Third St, Makati', 'John Bornoz', '09181234569', 20000.00, 'Active', '12-3456789-2', '123-456-789-002', 'PH-123456791', NULL, '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-('EMP004', 'Dev Jimenez', 'Barista', 'Management', 'dev.jimenez@grande.com', '09171234570', '2022-11-01', '1992-12-10', '321 Fourth St, Pasig', 'Lisa Jimenez', '09181234570', 25000.00, 'Active', '12-3456789-3', '123-456-789-003', 'PH-123456792', NULL, '2025-12-09 15:12:48', '2025-12-09 15:12:48'),
-('EMP005', 'Karl Gonzales', 'Barista', 'Service', 'karl.gonzales@grande.com', '09171234571', '2023-04-15', '1997-02-28', '654 Fifth St, Taguig', 'Rosa Gonzales', '09181234571', 18000.00, 'Active', '12-3456789-4', '123-456-789-004', 'PH-123456793', NULL, '2025-12-09 15:12:48', '2025-12-09 15:12:48');
 
 -- --------------------------------------------------------
 
@@ -259,7 +237,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `username`, `password_hash`, `full_name`, `email`, `role`, `created_at`, `last_login`, `is_active`) VALUES
-(1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Avery Libran', 'admin@grande.com', 'admin', '2025-12-09 15:12:48', '2025-12-09 15:27:24', 1);
+(1, 'admin', '$2y$10$RAj0A1dW1NI19PvOjuLftOuKnfSfPd9BljgQ7cOJkuGcWztBd9RZu', 'System Administrator', 'admin@grande.com', 'admin', '2025-12-10 23:47:26', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -382,7 +360,7 @@ ALTER TABLE `archives`
 -- AUTO_INCREMENT for table `attendance_records`
 --
 ALTER TABLE `attendance_records`
-  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `audit_trail`
