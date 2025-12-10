@@ -1,4 +1,4 @@
-// js/employees.js - Fixed Version
+// js/employees.js - FIXED VERSION
 
 const API_URL = '../api/employees.php';
 const SCHEDULE_API = '../api/schedules.php';
@@ -9,8 +9,10 @@ let currentScheduleEmployee = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ Employees page initializing...');
     loadEmployees();
     setupEventListeners();
+    generateNextEmployeeId();
 });
 
 function setupEventListeners() {
@@ -35,10 +37,13 @@ function setupEventListeners() {
         filterStatus.addEventListener('change', renderEmployees);
     }
     
-    // Add Employee button
+    // Add Employee button - FIXED
     const addBtn = document.getElementById('addEmployeeBtn');
     if (addBtn) {
         addBtn.addEventListener('click', openAddModal);
+        console.log('✅ Add Employee button listener attached');
+    } else {
+        console.error('❌ Add Employee button not found!');
     }
     
     // Modal close buttons
@@ -66,7 +71,7 @@ function setupEventListeners() {
     // Blocklist toggle button
     const blocklistToggleBtn = document.getElementById('blocklistToggleBtn');
     if (blocklistToggleBtn) {
-        blocklistToggleBtn.addEventListener('click', showBlocklistedOnly);
+        blocklistToggleBtn.addEventListener('click', toggleBlocklistView);
     }
     
     // Form submission
@@ -107,7 +112,28 @@ function setupEventListeners() {
             window.location.href = '../logout.php';
         });
     }
+    
+    // Close modals on outside click
+    window.addEventListener('click', function(e) {
+        const employeeModal = document.getElementById('employeeModal');
+        const scheduleModal = document.getElementById('scheduleModal');
+        const scheduleEditModal = document.getElementById('scheduleEditModal');
+        
+        if (e.target === employeeModal) {
+            closeEmployeeModal();
+        }
+        if (e.target === scheduleModal) {
+            closeScheduleModal();
+        }
+        if (e.target === scheduleEditModal) {
+            closeScheduleEditModal();
+        }
+    });
 }
+
+// =============================================
+// EMPLOYEE CRUD OPERATIONS
+// =============================================
 
 async function loadEmployees() {
     try {
@@ -116,6 +142,7 @@ async function loadEmployees() {
         
         if (result.success) {
             employees = result.data;
+            console.log(`✅ Loaded ${employees.length} employees`);
             updateAnalytics();
             renderEmployees();
         } else {
@@ -237,16 +264,216 @@ function renderEmployees() {
     `).join('');
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// =============================================
+// MODAL FUNCTIONS - FIXED
+// =============================================
+
+function openAddModal() {
+    console.log('📝 Opening Add Employee modal...');
+    
+    const modal = document.getElementById('employeeModal');
+    const form = document.getElementById('employeeForm');
+    const title = document.getElementById('modalTitle');
+    
+    if (!modal) {
+        console.error('❌ Employee modal not found!');
+        showNotification('Modal element not found', 'error');
+        return;
+    }
+    
+    // Reset form
+    if (form) {
+        form.reset();
+    }
+    
+    // Set title
+    if (title) {
+        title.textContent = 'Add New Employee';
+    }
+    
+    // Generate new employee ID
+    generateNextEmployeeId();
+    
+    // Enable employee ID field for new employee
+    const empIdInput = document.getElementById('employeeId');
+    if (empIdInput) {
+        empIdInput.removeAttribute('readonly');
+    }
+    
+    // Clear editing flag
+    editingEmployeeId = null;
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    console.log('✅ Add Employee modal opened');
 }
 
-// Fixed Schedule Management Functions for employees.js
-// Add these functions to your employees.js file or replace the existing ones
+function openEditModal(employeeId) {
+    console.log('📝 Opening Edit Employee modal for:', employeeId);
+    
+    const employee = employees.find(e => e.employee_id === employeeId);
+    if (!employee) {
+        showNotification('Employee not found', 'error');
+        return;
+    }
+    
+    const modal = document.getElementById('employeeModal');
+    const title = document.getElementById('modalTitle');
+    
+    if (!modal) {
+        console.error('❌ Employee modal not found!');
+        return;
+    }
+    
+    // Set editing flag
+    editingEmployeeId = employeeId;
+    
+    // Set title
+    if (title) {
+        title.textContent = 'Edit Employee';
+    }
+    
+    // Populate form
+    document.getElementById('employeeId').value = employee.employee_id;
+    document.getElementById('employeeName').value = employee.name;
+    document.getElementById('position').value = employee.position;
+    document.getElementById('department').value = employee.department;
+    document.getElementById('email').value = employee.email || '';
+    document.getElementById('phone').value = employee.phone;
+    document.getElementById('dateHired').value = employee.date_hired;
+    document.getElementById('birthdate').value = employee.birthdate || '';
+    document.getElementById('address').value = employee.address || '';
+    document.getElementById('emergencyContact').value = employee.emergency_contact || '';
+    document.getElementById('emergencyPhone').value = employee.emergency_phone || '';
+    document.getElementById('monthlySalary').value = employee.monthly_salary;
+    document.getElementById('status').value = employee.status;
+    document.getElementById('sssNumber').value = employee.sss_number || '';
+    document.getElementById('tinNumber').value = employee.tin_number || '';
+    document.getElementById('philhealthNumber').value = employee.philhealth_number || '';
+    
+    // Disable employee ID field for editing
+    document.getElementById('employeeId').setAttribute('readonly', true);
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    console.log('✅ Edit Employee modal opened');
+}
+
+function closeEmployeeModal() {
+    const modal = document.getElementById('employeeModal');
+    const form = document.getElementById('employeeForm');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    if (form) {
+        form.reset();
+    }
+    
+    editingEmployeeId = null;
+    
+    console.log('✅ Employee modal closed');
+}
+
+async function saveEmployee(e) {
+    e.preventDefault();
+    
+    console.log('💾 Saving employee...');
+    
+    const data = {
+        employee_id: document.getElementById('employeeId').value,
+        name: document.getElementById('employeeName').value,
+        position: document.getElementById('position').value,
+        department: document.getElementById('department').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        date_hired: document.getElementById('dateHired').value,
+        birthdate: document.getElementById('birthdate').value,
+        address: document.getElementById('address').value,
+        emergency_contact: document.getElementById('emergencyContact').value,
+        emergency_phone: document.getElementById('emergencyPhone').value,
+        monthly_salary: parseFloat(document.getElementById('monthlySalary').value),
+        status: document.getElementById('status').value,
+        sss_number: document.getElementById('sssNumber').value,
+        tin_number: document.getElementById('tinNumber').value,
+        philhealth_number: document.getElementById('philhealthNumber').value
+    };
+    
+    try {
+        const action = editingEmployeeId ? 'update' : 'create';
+        const method = editingEmployeeId ? 'PUT' : 'POST';
+        
+        const response = await fetch(`${API_URL}?action=${action}`, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(editingEmployeeId ? 'Employee updated successfully' : 'Employee added successfully', 'success');
+            closeEmployeeModal();
+            await loadEmployees();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving employee:', error);
+        showNotification('Failed to save employee', 'error');
+    }
+}
+
+function generateNextEmployeeId() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    
+    // Find highest number for this month
+    const prefix = `EMP`;
+    const existingIds = employees
+        .filter(e => e.employee_id.startsWith(prefix))
+        .map(e => {
+            const num = e.employee_id.split('-')[1];
+            return parseInt(num.substring(6)) || 0;
+        });
+    
+    const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+    const newId = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+    
+    const empIdInput = document.getElementById('employeeId');
+    if (empIdInput) {
+        empIdInput.value = newId;
+    }
+    
+    return newId;
+}
+
+function toggleBlocklistView() {
+    viewingBlocklisted = !viewingBlocklisted;
+    const btn = document.getElementById('blocklistToggleBtn');
+    
+    if (viewingBlocklisted) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fas fa-check"></i> Show All Employees';
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fas fa-ban"></i> View Blocklisted';
+    }
+    
+    renderEmployees();
+}
+
+// =============================================
+// SCHEDULE MANAGEMENT - FIXED
+// =============================================
 
 async function openScheduleModal(employeeId, employeeName) {
+    console.log('📅 Opening schedule modal for:', employeeId, employeeName);
+    
     currentScheduleEmployee = employeeId;
     const nameEl = document.getElementById('scheduleEmployeeName');
     const modal = document.getElementById('scheduleModal');
@@ -255,16 +482,24 @@ async function openScheduleModal(employeeId, employeeName) {
     if (modal) modal.style.display = 'block';
     
     // Show loading state
-    document.getElementById('currentWeekScheduleBody').innerHTML = `
-        <tr><td colspan="4" style="text-align: center; padding: 20px;">
-            <i class="fas fa-spinner fa-spin"></i> Loading current week...
-        </td></tr>
-    `;
-    document.getElementById('nextWeekScheduleBody').innerHTML = `
-        <tr><td colspan="4" style="text-align: center; padding: 20px;">
-            <i class="fas fa-spinner fa-spin"></i> Loading next week...
-        </td></tr>
-    `;
+    const currentBody = document.getElementById('currentWeekScheduleBody');
+    const nextBody = document.getElementById('nextWeekScheduleBody');
+    
+    if (currentBody) {
+        currentBody.innerHTML = `
+            <tr><td colspan="4" style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading current week...
+            </td></tr>
+        `;
+    }
+    
+    if (nextBody) {
+        nextBody.innerHTML = `
+            <tr><td colspan="4" style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading next week...
+            </td></tr>
+        `;
+    }
     
     await loadEmployeeSchedule(employeeId);
 }
@@ -277,10 +512,13 @@ function closeScheduleModal() {
 
 async function loadEmployeeSchedule(employeeId) {
     try {
-        const currentResponse = await fetch(`${SCHEDULE_API}?action=current&t=${Date.now()}`);
+        // Add cache busting to force fresh data
+        const timestamp = Date.now();
+        
+        const currentResponse = await fetch(`${SCHEDULE_API}?action=current&t=${timestamp}`);
         const currentResult = await currentResponse.json();
         
-        const nextResponse = await fetch(`${SCHEDULE_API}?action=next&t=${Date.now()}`);
+        const nextResponse = await fetch(`${SCHEDULE_API}?action=next&t=${timestamp}`);
         const nextResult = await nextResponse.json();
         
         if (currentResult.success && nextResult.success) {
@@ -447,7 +685,7 @@ async function saveSchedule(e) {
             showNotification('✅ Schedule updated successfully!', 'success');
             closeScheduleEditModal();
             
-            // Force reload the employee schedule with cache busting
+            // Force reload the employee schedule
             console.log('🔄 Reloading employee schedule...');
             await loadEmployeeSchedule(employeeId);
             
@@ -487,6 +725,10 @@ function getLastSaturday(date) {
     d.setDate(d.getDate() - daysToSubtract);
     return d;
 }
+
+// =============================================
+// UTILITY FUNCTIONS
+// =============================================
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -542,8 +784,16 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Make functions globally accessible
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
 window.openScheduleModal = openScheduleModal;
 window.editScheduleDay = editScheduleDay;
 window.closeScheduleEditModal = closeScheduleEditModal;
+window.saveSchedule = saveSchedule;
+window.viewEmployee = function(id) { openEditModal(id); };
+window.toggleBlocklist = async function(employeeId, blocklist) {
+    // Placeholder for blocklist functionality
+    console.log('Blocklist function called for:', employeeId, blocklist);
+};
 
-console.log('✅ Employee schedule manager loaded with auto-refresh');
+console.log('✅ Fixed employees.js loaded successfully');
