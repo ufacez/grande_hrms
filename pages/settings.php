@@ -58,126 +58,116 @@ $user = getCurrentUser();
 
                 <!-- Profile Tab -->
                 <div class="tab-content active" id="profile">
-                    <div style="padding: 25px;">
-                        <!-- Profile Header -->
-                        <div class="profile-header">
-                            <div class="profile-avatar" id="profileAvatar">
-                                <!-- Initials will be loaded here -->
-                            </div>
-                            <div class="profile-info">
-                                <h2 class="profile-name" id="profileName">Loading...</h2>
-                                <span class="profile-role" id="profileRole">Loading...</span>
-                                <div class="profile-meta">
-                                    <div class="meta-item">
-                                        <i class="fas fa-user"></i>
-                                        <span id="profileUsername">Loading...</span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="fas fa-envelope"></i>
-                                        <span id="profileEmail">Loading...</span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="fas fa-calendar"></i>
-                                        <span>Joined: <strong id="profileJoined">Loading...</strong></span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i class="fas fa-clock"></i>
-                                        <span>Last Login: <strong id="profileLastLogin">Loading...</strong></span>
-                                    </div>
+                    <!-- Profile Header -->
+                    <div class="profile-header">
+                        <div class="profile-avatar" id="profileAvatar">
+                            <!-- Initials will be loaded here -->
+                        </div>
+                        <div class="profile-info">
+                            <h2 class="profile-name" id="profileName">Loading...</h2>
+                            <span class="profile-role" id="profileRole">Loading...</span>
+                            <div class="profile-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-user"></i>
+                                    <span id="profileUsername">Loading...</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-envelope"></i>
+                                    <span id="profileEmail">Loading...</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Joined: <strong id="profileJoined">Loading...</strong></span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Last Login: <strong id="profileLastLogin">Loading...</strong></span>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Personal Information Section -->
-                        <div class="settings-section">
-                            <h3><i class="fas fa-id-card"></i> Personal Information</h3>
-                            <form id="profileForm">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="fullName">Full Name *</label>
-                                        <input type="text" id="fullName" required disabled>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="email">Email Address *</label>
-                                        <input type="email" id="email" required disabled>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="username">Username</label>
-                                        <input type="text" id="username" disabled>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="role">Role</label>
-                                        <input type="text" id="role" disabled>
-                                    </div>
-                                </div>
-                                <div class="btn-group">
-                                    <button type="button" class="btn-primary" id="editProfileBtn">
-                                        <i class="fas fa-edit"></i>
-                                        Edit Profile
-                                    </button>
-                                    <button type="submit" class="btn-primary" id="saveProfileBtn" style="display: none;">
-                                        <i class="fas fa-save"></i>
-                                        Save Changes
-                                    </button>
-                                    <button type="button" class="btn-secondary" id="cancelEditBtn" style="display: none;">
-                                        <i class="fas fa-times"></i>
-                                        Cancel
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Security Section -->
-                        <div class="settings-section" style="margin-top: 30px;">
-                            <h3><i class="fas fa-lock"></i> Security Settings</h3>
-                            <form id="passwordForm">
+                    <!-- Personal Information Section -->
+                    <div class="settings-section">
+                        <h3><i class="fas fa-id-card"></i> Personal Information</h3>
+                        <form id="profileForm">
+                            <div class="form-row">
                                 <div class="form-group">
-                                    <label for="currentPassword">Current Password *</label>
+                                    <label for="fullName">Full Name *</label>
+                                    <input type="text" id="fullName" required disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email Address *</label>
+                                    <input type="email" id="email" required disabled>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" id="username" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label for="role">Role</label>
+                                    <input type="text" id="role" disabled>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn-primary" id="editProfileBtn">
+                                    <i class="fas fa-edit"></i>
+                                    Edit Profile
+                                </button>
+                                <button type="submit" class="btn-primary" id="saveProfileBtn" style="display: none;">
+                                    <i class="fas fa-save"></i>
+                                    Save Changes
+                                </button>
+                                <button type="button" class="btn-secondary" id="cancelEditBtn" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Section -->
+                    <div class="settings-section">
+                        <h3><i class="fas fa-lock"></i> Security Settings</h3>
+                        <form id="passwordForm">
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password *</label>
+                                <div class="password-input-wrapper">
+                                    <input type="password" id="currentPassword" required>
+                                    <button type="button" class="toggle-password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="newPassword">New Password *</label>
                                     <div class="password-input-wrapper">
-                                        <input type="password" id="currentPassword" required>
+                                        <input type="password" id="newPassword" required>
                                         <button type="button" class="toggle-password">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="newPassword">New Password *</label>
-                                        <div class="password-input-wrapper">
-                                            <input type="password" id="newPassword" required>
-                                            <button type="button" class="toggle-password">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="confirmPassword">Confirm New Password *</label>
-                                        <div class="password-input-wrapper">
-                                            <input type="password" id="confirmPassword" required>
-                                            <button type="button" class="toggle-password">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </div>
+                                <div class="form-group">
+                                    <label for="confirmPassword">Confirm New Password *</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="confirmPassword" required>
+                                        <button type="button" class="toggle-password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="password-requirements">
-                                    <h4>Password Requirements:</h4>
-                                    <ul>
-                                        <li>At least 6 characters long</li>
-                                        <li>Must be different from current password</li>
-                                        <li>Both passwords must match</li>
-                                    </ul>
-                                </div>
-                                <div class="btn-group">
-                                    <button type="submit" class="btn-primary">
-                                        <i class="fas fa-key"></i>
-                                        Change Password
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div class="btn-group">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-key"></i>
+                                    Change Password
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
