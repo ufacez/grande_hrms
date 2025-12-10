@@ -1,5 +1,5 @@
 <?php
-// pages/attendance.php
+// pages/attendance.php - Complete with Manual Entry
 require_once '../config/config.php';
 requireLogin();
 
@@ -17,6 +17,164 @@ $user = getCurrentUser();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="../js/attendance-pdf-export.js" defer></script>
     <script src="../js/audit-archive-manager.js"></script>
+    <style>
+        /* Manual Entry Modal Styles */
+        .add-record-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+        
+        .add-record-btn:hover {
+            background-color: #218838;
+        }
+        
+        .employee-search-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .employee-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .employee-search-results.show {
+            display: block;
+        }
+        
+        .employee-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        
+        .employee-result-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .employee-result-item strong {
+            display: block;
+            color: #111;
+            margin-bottom: 3px;
+        }
+        
+        .employee-result-item small {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .selected-employee {
+            background-color: #e8f5e9;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .selected-employee.show {
+            display: block;
+        }
+        
+        .selected-employee-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .selected-employee-details strong {
+            display: block;
+            color: #111;
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+        
+        .selected-employee-details small {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .clear-selection {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 16px;
+        }
+        
+        .form-note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #856404;
+        }
+        
+        .form-note i {
+            margin-right: 8px;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .quick-action-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .quick-action-btn:hover {
+            background: #e9ecef;
+            border-color: #222;
+        }
+        
+        .quick-action-btn.active {
+            background: #222;
+            color: white;
+            border-color: #222;
+        }
+        
+        .export-action {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 25px;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -49,8 +207,12 @@ $user = getCurrentUser();
             </div>
 
             <div class="attendance-section">
-                <!-- Export Action Section -->
+                <!-- Action Buttons Section -->
                 <div class="export-action">
+                    <button class="add-record-btn" id="addRecordBtn">
+                        <i class="fas fa-plus-circle"></i>
+                        Add Manual Record
+                    </button>
                     <button class="action-button" onclick="exportToPDF()">
                         <i class="fas fa-file-pdf"></i>
                         Export to PDF
@@ -144,6 +306,118 @@ $user = getCurrentUser();
         </div>
     </div>
 
+    <!-- Add Manual Record Modal -->
+    <div id="addRecordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Manual Attendance Record</h2>
+                <span class="close-modal" id="closeAddModal">&times;</span>
+            </div>
+            <div id="addNotification" class="notification" style="display: none;"></div>
+            <div class="modal-body">
+                <div class="form-note">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Manual Entry Mode:</strong> This is for testing. Once ZKTeco SenseFP M1 is integrated, records will be automatic.
+                </div>
+                
+                <form id="addRecordForm">
+                    <!-- Employee Selection -->
+                    <div class="form-group">
+                        <label>Search Employee *</label>
+                        <div class="employee-search-container">
+                            <input 
+                                type="text" 
+                                id="employeeSearch" 
+                                placeholder="Type employee name or ID..."
+                                autocomplete="off"
+                                required>
+                            <div class="employee-search-results" id="searchResults"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Selected Employee Display -->
+                    <div class="selected-employee" id="selectedEmployee">
+                        <div class="selected-employee-info">
+                            <div class="selected-employee-details">
+                                <strong id="selectedName"></strong>
+                                <small id="selectedDetails"></small>
+                            </div>
+                            <button type="button" class="clear-selection" id="clearSelection" title="Clear selection">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="selectedEmployeeId">
+                    
+                    <!-- Date -->
+                    <div class="form-group">
+                        <label for="attendanceDate">Date *</label>
+                        <input type="date" id="attendanceDate" required>
+                    </div>
+                    
+                    <!-- Quick Status Actions -->
+                    <div class="form-group">
+                        <label>Quick Status Selection</label>
+                        <div class="quick-actions">
+                            <button type="button" class="quick-action-btn" data-status="Present">
+                                <i class="fas fa-check-circle"></i> Present
+                            </button>
+                            <button type="button" class="quick-action-btn" data-status="Late">
+                                <i class="fas fa-clock"></i> Late
+                            </button>
+                            <button type="button" class="quick-action-btn" data-status="Absent">
+                                <i class="fas fa-times-circle"></i> Absent
+                            </button>
+                            <button type="button" class="quick-action-btn" data-status="On Leave">
+                                <i class="fas fa-calendar-times"></i> On Leave
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Time In -->
+                    <div class="form-group">
+                        <label for="timeIn">Time In</label>
+                        <input type="time" id="timeIn">
+                        <small style="color: #666; font-size: 12px;">Leave empty for Absent/On Leave</small>
+                    </div>
+                    
+                    <!-- Time Out -->
+                    <div class="form-group">
+                        <label for="timeOut">Time Out</label>
+                        <input type="time" id="timeOut">
+                        <small style="color: #666; font-size: 12px;">Optional - can be updated later</small>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div class="form-group">
+                        <label for="statusSelect">Status *</label>
+                        <select id="statusSelect" required>
+                            <option value="">Select Status</option>
+                            <option value="Present">Present</option>
+                            <option value="Late">Late</option>
+                            <option value="Absent">Absent</option>
+                            <option value="On Leave">On Leave</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Remarks -->
+                    <div class="form-group">
+                        <label for="remarksInput">Remarks</label>
+                        <textarea id="remarksInput" rows="3" placeholder="Optional notes..."></textarea>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="submit" class="save-btn">
+                            <i class="fas fa-save"></i> Save Record
+                        </button>
+                        <button type="button" class="cancel-btn" id="cancelAddBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Attendance Modal -->
     <div id="editAttendanceModal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -164,8 +438,8 @@ $user = getCurrentUser();
                         <input type="date" id="editAttendanceDate" required>
                     </div>
                     <div class="form-group">
-                        <label for="editTimeIn">Time In *</label>
-                        <input type="time" id="editTimeIn" required>
+                        <label for="editTimeIn">Time In</label>
+                        <input type="time" id="editTimeIn">
                     </div>
                     <div class="form-group">
                         <label for="editTimeOut">Time Out</label>
@@ -215,6 +489,7 @@ $user = getCurrentUser();
     </div>
 
     <script src="../js/attendance.js"></script>
+    <script src="../js/attendance-manual.js"></script>
     <script>
         // Update API calls to use PHP backend
         const API_URL = '../api/attendance.php';
