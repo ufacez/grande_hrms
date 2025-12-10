@@ -1,15 +1,19 @@
-// js/settings.js - Dynamic Settings, Audit Trail & Archives Manager
+// js/settings.js - Complete with Profile, Audit Trail & Archives Manager
 
 const AUDIT_API = '../api/audit.php';
+const PROFILE_API = '../api/profile.php';
 const EMPLOYEES_API = '../api/employees.php';
 const ATTENDANCE_API = '../api/attendance.php';
 const PAYROLL_API = '../api/payroll.php';
+
+let currentUser = null;
 
 // Initialize Settings Page
 document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     setupEventListeners();
     loadAuditTrail();
+    loadProfile();
     setupAutoRefresh();
 });
 
@@ -34,6 +38,8 @@ function setupTabs() {
                 loadAuditTrail();
             } else if (tabName === 'archives') {
                 loadArchives();
+            } else if (tabName === 'profile') {
+                loadProfile();
             }
         });
     });
@@ -59,6 +65,30 @@ function setupEventListeners() {
     document.getElementById('restoreSelected')?.addEventListener('click', restoreSelected);
     document.getElementById('deleteSelected')?.addEventListener('click', deleteSelected);
     document.getElementById('clearArchives')?.addEventListener('click', clearAllArchives);
+    
+    // Profile actions
+    document.getElementById('editProfileBtn')?.addEventListener('click', enableEditMode);
+    document.getElementById('cancelEditBtn')?.addEventListener('click', cancelEdit);
+    document.getElementById('profileForm')?.addEventListener('submit', handleProfileUpdate);
+    document.getElementById('passwordForm')?.addEventListener('submit', handlePasswordChange);
+    
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    });
     
     // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
@@ -404,6 +434,176 @@ async function clearAllArchives() {
 }
 
 // =============================================
+// PROFILE FUNCTIONS
+// =============================================
+
+async function loadProfile() {
+    try {
+        const response = await fetch(`${PROFILE_API}?action=get`);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentUser = result.data;
+            displayProfile(result.data);
+        } else {
+            showNotification('error', 'Error', result.message);
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showNotification('error', 'Error', 'Failed to load profile');
+    }
+}
+
+function displayProfile(user) {
+    // Profile header
+    const initials = user.full_name.split(' ').map(n => n[0]).join('').toUpperCase();
+    document.getElementById('profileAvatar').textContent = initials;
+    document.getElementById('profileName').textContent = user.full_name;
+    document.getElementById('profileRole').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    
+    // Profile meta
+    document.getElementById('profileUsername').textContent = user.username;
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('profileJoined').textContent = formatDate(user.created_at);
+    document.getElementById('profileLastLogin').textContent = user.last_login ? formatDate(user.last_login) : 'Never';
+    
+    // Form fields
+    document.getElementById('fullName').value = user.full_name;
+    document.getElementById('email').value = user.email;
+    document.getElementById('username').value = user.username;
+    document.getElementById('role').value = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+}
+
+function enableEditMode() {
+    // Enable form fields
+    document.getElementById('fullName').disabled = false;
+    document.getElementById('email').disabled = false;
+    
+    // Show/hide buttons
+    document.getElementById('editProfileBtn').style.display = 'none';
+    document.getElementById('saveProfileBtn').style.display = 'inline-flex';
+    document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+    
+    // Focus on first field
+    document.getElementById('fullName').focus();
+}
+
+function cancelEdit() {
+    // Disable form fields
+    document.getElementById('fullName').disabled = true;
+    document.getElementById('email').disabled = true;
+    
+    // Restore original values
+    if (currentUser) {
+        document.getElementById('fullName').value = currentUser.full_name;
+        document.getElementById('email').value = currentUser.email;
+    }
+    
+    // Show/hide buttons
+    document.getElementById('editProfileBtn').style.display = 'inline-flex';
+    document.getElementById('saveProfileBtn').style.display = 'none';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+async function handleProfileUpdate(e) {
+    e.preventDefault();
+    
+    const fullName = document.getElementById('fullName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    
+    if (!fullName || !email) {
+        showNotification('error', 'Error', 'Please fill in all required fields');
+        return;
+    }
+    
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('error', 'Error', 'Please enter a valid email address');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${PROFILE_API}?action=update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                full_name: fullName,
+                email: email
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Success', 'Profile updated successfully!');
+            await loadProfile();
+            cancelEdit();
+            
+            // Update header display
+            document.querySelector('.user-profile span').textContent = fullName;
+        } else {
+            showNotification('error', 'Error', result.message);
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showNotification('error', 'Error', 'Failed to update profile');
+    }
+}
+
+async function handlePasswordChange(e) {
+    e.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Validate passwords
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showNotification('error', 'Error', 'Please fill in all password fields');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification('error', 'Error', 'New password must be at least 6 characters long');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification('error', 'Error', 'New passwords do not match');
+        return;
+    }
+    
+    if (currentPassword === newPassword) {
+        showNotification('error', 'Error', 'New password must be different from current password');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${PROFILE_API}?action=change-password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Success', 'Password changed successfully!');
+            document.getElementById('passwordForm').reset();
+        } else {
+            showNotification('error', 'Error', result.message);
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+        showNotification('error', 'Error', 'Failed to change password');
+    }
+}
+
+// =============================================
 // UTILITY FUNCTIONS
 // =============================================
 
@@ -518,4 +718,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-console.log('✅ Dynamic Settings Manager loaded successfully');
+console.log('✅ Settings Manager with Profile loaded successfully');

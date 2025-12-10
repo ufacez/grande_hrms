@@ -1,3 +1,5 @@
+/* css/settings.css - Complete with Profile, Audit Trail & Archives */
+
 * {
     margin: 0;
     padding: 0;
@@ -14,6 +16,10 @@ body {
     display: flex;
     min-height: 100vh;
 }
+
+/* =============================================
+   SIDEBAR STYLES
+   ============================================= */
 
 .sidebar {
     width: 250px;
@@ -113,6 +119,10 @@ body {
     color: #111;
 }
 
+/* =============================================
+   MAIN CONTENT
+   ============================================= */
+
 .main-content {
     margin-left: 250px;
     transition: margin-left 0.3s;
@@ -125,6 +135,10 @@ body {
     margin-left: 60px;
     width: calc(100% - 60px);
 }
+
+/* =============================================
+   HEADER STYLES
+   ============================================= */
 
 .header {
     background: #fff;
@@ -160,28 +174,9 @@ body {
     gap: 10px;
 }
 
-.logout-btn {
-    position: fixed;
-    left: 18px;
-    bottom: 18px;
-    background: #222;
-    color: #fff;
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-size: 14px;
-    z-index: 1100;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.logout-btn:hover {
-    background: #111;
-}
+/* =============================================
+   TABS SYSTEM
+   ============================================= */
 
 .tabs-container {
     background: white;
@@ -233,6 +228,230 @@ body {
 .tab-content.active {
     display: block;
 }
+
+/* =============================================
+   PROFILE TAB STYLES
+   ============================================= */
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: white;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 5px;
+}
+
+.profile-role {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.profile-meta {
+    margin-top: 12px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 13px;
+}
+
+.meta-item i {
+    color: #999;
+}
+
+/* =============================================
+   FORM STYLES
+   ============================================= */
+
+.settings-section {
+    margin-bottom: 30px;
+}
+
+.settings-section h3 {
+    font-size: 18px;
+    color: #222;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+    font-size: 13px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #222;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.form-group input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    color: #999;
+}
+
+.password-input-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    padding: 5px;
+}
+
+.toggle-password:hover {
+    color: #222;
+}
+
+.password-requirements {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.password-requirements h4 {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.password-requirements ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements li {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+    padding-left: 16px;
+    position: relative;
+}
+
+.password-requirements li:before {
+    content: "•";
+    position: absolute;
+    left: 6px;
+    color: #999;
+}
+
+.btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-group button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-group .btn-primary {
+    background-color: #222;
+    color: white;
+}
+
+.btn-group .btn-primary:hover {
+    background-color: #111;
+}
+
+.btn-group .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-group .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* =============================================
+   AUDIT TRAIL STYLES
+   ============================================= */
 
 .audit-filters {
     padding: 20px;
@@ -377,6 +596,7 @@ body {
     color: #888;
 }
 
+/* Audit Entry Type Colors */
 .type-employee {
     --entry-color: #222;
 }
@@ -472,6 +692,10 @@ body {
     margin-bottom: 20px;
     opacity: 0.3;
 }
+
+/* =============================================
+   ARCHIVES STYLES
+   ============================================= */
 
 .archive-controls {
     display: flex;
@@ -641,6 +865,10 @@ tbody tr:hover {
     color: #155724;
 }
 
+/* =============================================
+   FOOTER INFO
+   ============================================= */
+
 .footer-info {
     padding: 15px 20px;
     background: #f8f9fa;
@@ -652,84 +880,133 @@ tbody tr:hover {
     align-items: center;
 }
 
-.settings-section {
-    margin-bottom: 30px;
-}
+/* =============================================
+   LOGOUT BUTTON
+   ============================================= */
 
-.settings-section h3 {
-    font-size: 18px;
-    color: #222;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #eee;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.setting-item {
-    background: white;
-    padding: 15px;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.setting-info h4 {
-    font-size: 15px;
-    color: #222;
-    margin-bottom: 5px;
-}
-
-.setting-info p {
-    font-size: 13px;
-    color: #666;
-}
-
-.toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-}
-
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
+.logout-btn {
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    background: #222;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 1100;
+    border: none;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
 }
 
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
+.logout-btn:hover {
+    background: #111;
 }
 
-input:checked+.slider {
-    background-color: #222;
+/* =============================================
+   RESPONSIVE DESIGN
+   ============================================= */
+
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+    
+    .sidebar {
+        width: 60px;
+    }
+    
+    .sidebar-header h2,
+    .nav-item span {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+    }
 }
 
-input:checked+.slider:before {
-    transform: translateX(26px);
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: 250px;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .btn-group button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .archive-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .archive-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .footer-info {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-content {
+        padding: 15px;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+    }
+
+    .profile-name {
+        font-size: 18px;
+    }
+
+    .logout-btn {
+        left: 10px;
+        bottom: 10px;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
 }
