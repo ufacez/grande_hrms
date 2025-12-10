@@ -1,4 +1,4 @@
-// js/employees.js - Updated with Archive System
+// js/employees.js - Fixed Version
 
 const API_URL = '../api/employees.php';
 const SCHEDULE_API = '../api/schedules.php';
@@ -15,30 +15,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
     // Sidebar toggle
-    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.querySelector('.main-content').classList.toggle('expanded');
-    });
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('expanded');
+        });
+    }
     
     // Search
-    document.getElementById('searchInput')?.addEventListener('input', renderEmployees);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', renderEmployees);
+    }
     
     // Filter
-    document.getElementById('filterStatus')?.addEventListener('change', renderEmployees);
+    const filterStatus = document.getElementById('filterStatus');
+    if (filterStatus) {
+        filterStatus.addEventListener('change', renderEmployees);
+    }
     
     // Add Employee button
-    document.getElementById('addEmployeeBtn')?.addEventListener('click', openAddModal);
+    const addBtn = document.getElementById('addEmployeeBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', openAddModal);
+    }
     
     // Modal close buttons
-    document.getElementById('closeModalBtn')?.addEventListener('click', closeEmployeeModal);
-    document.getElementById('cancelModalBtn')?.addEventListener('click', closeEmployeeModal);
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeEmployeeModal);
+    }
+    
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    if (cancelModalBtn) {
+        cancelModalBtn.addEventListener('click', closeEmployeeModal);
+    }
     
     // Schedule modal close buttons
-    document.getElementById('closeScheduleModalBtn')?.addEventListener('click', closeScheduleModal);
-    document.getElementById('cancelScheduleBtn')?.addEventListener('click', closeScheduleModal);
+    const closeScheduleModalBtn = document.getElementById('closeScheduleModalBtn');
+    if (closeScheduleModalBtn) {
+        closeScheduleModalBtn.addEventListener('click', closeScheduleModal);
+    }
+    
+    const cancelScheduleBtn = document.getElementById('cancelScheduleBtn');
+    if (cancelScheduleBtn) {
+        cancelScheduleBtn.addEventListener('click', closeScheduleModal);
+    }
     
     // Blocklist toggle button
-    document.getElementById('blocklistToggleBtn')?.addEventListener('click', showBlocklistedOnly);
+    const blocklistToggleBtn = document.getElementById('blocklistToggleBtn');
+    if (blocklistToggleBtn) {
+        blocklistToggleBtn.addEventListener('click', showBlocklistedOnly);
+    }
     
     // Form submission
     const form = document.getElementById('employeeForm');
@@ -47,25 +76,37 @@ function setupEventListeners() {
     }
     
     // Schedule form submission
-    const scheduleForm = document.getElementById('scheduleForm');
+    const scheduleForm = document.getElementById('scheduleEditForm');
     if (scheduleForm) {
         scheduleForm.addEventListener('submit', saveSchedule);
     }
     
     // Logout
-    document.getElementById('logoutBtn')?.addEventListener('click', () => {
-        document.getElementById('logoutConfirmModal').style.display = 'block';
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            const logoutModal = document.getElementById('logoutConfirmModal');
+            if (logoutModal) {
+                logoutModal.style.display = 'block';
+            }
+        });
+    }
     
     document.querySelectorAll('.close-logout').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.getElementById('logoutConfirmModal').style.display = 'none';
+            const logoutModal = document.getElementById('logoutConfirmModal');
+            if (logoutModal) {
+                logoutModal.style.display = 'none';
+            }
         });
     });
     
-    document.getElementById('confirmLogoutBtn')?.addEventListener('click', () => {
-        window.location.href = '../logout.php';
-    });
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', () => {
+            window.location.href = '../logout.php';
+        });
+    }
 }
 
 async function loadEmployees() {
@@ -93,10 +134,15 @@ async function updateAnalytics() {
         
         if (result.success) {
             const stats = result.data;
-            document.getElementById('totalEmployees').textContent = stats.total_employees || 0;
-            document.getElementById('activeEmployees').textContent = stats.active_employees || 0;
-            document.getElementById('onLeaveEmployees').textContent = stats.on_leave || 0;
-            document.getElementById('blocklistedEmployees').textContent = stats.blocklisted || 0;
+            const totalEl = document.getElementById('totalEmployees');
+            const activeEl = document.getElementById('activeEmployees');
+            const leaveEl = document.getElementById('onLeaveEmployees');
+            const blocklistEl = document.getElementById('blocklistedEmployees');
+            
+            if (totalEl) totalEl.textContent = stats.total_employees || 0;
+            if (activeEl) activeEl.textContent = stats.active_employees || 0;
+            if (leaveEl) leaveEl.textContent = stats.on_leave || 0;
+            if (blocklistEl) blocklistEl.textContent = stats.blocklisted || 0;
         }
     } catch (error) {
         console.error('Error loading statistics:', error);
@@ -105,8 +151,13 @@ async function updateAnalytics() {
 
 function renderEmployees() {
     const grid = document.getElementById('employeeGrid');
-    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('filterStatus')?.value || 'all';
+    if (!grid) return;
+    
+    const searchInput = document.getElementById('searchInput');
+    const filterStatus = document.getElementById('filterStatus');
+    
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const statusFilter = filterStatus ? filterStatus.value : 'all';
     
     let filtered = employees.filter(emp => {
         const matchSearch = !searchTerm || 
@@ -135,11 +186,11 @@ function renderEmployees() {
              onclick="viewEmployee('${emp.employee_id}')">
             <div class="employee-header">
                 <div>
-                    <div class="employee-name">${emp.name}</div>
-                    <div style="color: #888; font-size: 13px;">${emp.employee_id}</div>
+                    <div class="employee-name">${escapeHtml(emp.name)}</div>
+                    <div style="color: #888; font-size: 13px;">${escapeHtml(emp.employee_id)}</div>
                 </div>
                 <div class="employee-actions" onclick="event.stopPropagation()">
-                    <button class="icon-btn" onclick="openScheduleModal('${emp.employee_id}', '${emp.name}')" title="Manage Schedule">
+                    <button class="icon-btn" onclick="openScheduleModal('${emp.employee_id}', '${escapeHtml(emp.name)}')" title="Manage Schedule">
                         <i class="fas fa-calendar-alt"></i>
                     </button>
                     <button class="icon-btn" onclick="openEditModal('${emp.employee_id}')" title="Edit">
@@ -161,24 +212,24 @@ function renderEmployees() {
             <div class="employee-info">
                 <div class="info-row">
                     <i class="fas fa-briefcase"></i>
-                    <span>${emp.position}</span>
+                    <span>${escapeHtml(emp.position)}</span>
                 </div>
                 <div class="info-row">
                     <i class="fas fa-building"></i>
-                    <span>${emp.department}</span>
+                    <span>${escapeHtml(emp.department)}</span>
                 </div>
                 <div class="info-row">
                     <i class="fas fa-envelope"></i>
-                    <span>${emp.email}</span>
+                    <span>${escapeHtml(emp.email)}</span>
                 </div>
                 <div class="info-row">
                     <i class="fas fa-phone"></i>
-                    <span>${emp.phone}</span>
+                    <span>${escapeHtml(emp.phone)}</span>
                 </div>
                 <div class="info-row">
                     <span class="status-indicator ${emp.status.toLowerCase().replace(' ', '-')}">
                         <i class="fas fa-circle"></i>
-                        ${emp.status}
+                        ${escapeHtml(emp.status)}
                     </span>
                 </div>
             </div>
@@ -186,16 +237,26 @@ function renderEmployees() {
     `).join('');
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function openScheduleModal(employeeId, employeeName) {
     currentScheduleEmployee = employeeId;
-    document.getElementById('scheduleEmployeeName').textContent = employeeName;
-    document.getElementById('scheduleModal').style.display = 'block';
+    const nameEl = document.getElementById('scheduleEmployeeName');
+    const modal = document.getElementById('scheduleModal');
+    
+    if (nameEl) nameEl.textContent = employeeName;
+    if (modal) modal.style.display = 'block';
     
     await loadEmployeeSchedule(employeeId);
 }
 
 function closeScheduleModal() {
-    document.getElementById('scheduleModal').style.display = 'none';
+    const modal = document.getElementById('scheduleModal');
+    if (modal) modal.style.display = 'none';
     currentScheduleEmployee = null;
 }
 
@@ -234,63 +295,82 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
     });
     
     const currentBody = document.getElementById('currentWeekScheduleBody');
-    currentBody.innerHTML = days.map((day, index) => {
-        const shift = currentDays[index];
-        return `
-            <tr>
-                <td style="font-weight: 500;">${day}</td>
-                <td>${shift ? shift.shift_name : 'Not Set'}</td>
-                <td>${shift ? shift.shift_time : '-'}</td>
-                <td>
-                    <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'current')">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    if (currentBody) {
+        currentBody.innerHTML = days.map((day, index) => {
+            const shift = currentDays[index];
+            return `
+                <tr>
+                    <td style="font-weight: 500;">${day}</td>
+                    <td>${shift ? escapeHtml(shift.shift_name) : 'Not Set'}</td>
+                    <td>${shift ? escapeHtml(shift.shift_time) : '-'}</td>
+                    <td>
+                        <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'current')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
     
     const nextBody = document.getElementById('nextWeekScheduleBody');
-    nextBody.innerHTML = days.map((day, index) => {
-        const shift = nextDays[index];
-        return `
-            <tr>
-                <td style="font-weight: 500;">${day}</td>
-                <td>${shift ? shift.shift_name : 'Not Set'}</td>
-                <td>${shift ? shift.shift_time : '-'}</td>
-                <td>
-                    <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'next')">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    if (nextBody) {
+        nextBody.innerHTML = days.map((day, index) => {
+            const shift = nextDays[index];
+            return `
+                <tr>
+                    <td style="font-weight: 500;">${day}</td>
+                    <td>${shift ? escapeHtml(shift.shift_name) : 'Not Set'}</td>
+                    <td>${shift ? escapeHtml(shift.shift_time) : '-'}</td>
+                    <td>
+                        <button class="schedule-edit-btn" onclick="editScheduleDay('${employeeId}', ${index}, 'next')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
 }
 
 function editScheduleDay(employeeId, dayIndex, week) {
     const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     
-    document.getElementById('editDayWeek').value = week;
-    document.getElementById('editDayIndex').value = dayIndex;
-    document.getElementById('editDayEmployee').value = employeeId;
-    document.getElementById('editDayName').textContent = days[dayIndex];
+    const weekEl = document.getElementById('editDayWeek');
+    const indexEl = document.getElementById('editDayIndex');
+    const empEl = document.getElementById('editDayEmployee');
+    const nameEl = document.getElementById('editDayName');
+    const modal = document.getElementById('scheduleEditModal');
     
-    document.getElementById('scheduleEditModal').style.display = 'block';
+    if (weekEl) weekEl.value = week;
+    if (indexEl) indexEl.value = dayIndex;
+    if (empEl) empEl.value = employeeId;
+    if (nameEl) nameEl.textContent = days[dayIndex];
+    if (modal) modal.style.display = 'block';
 }
 
 function closeScheduleEditModal() {
-    document.getElementById('scheduleEditModal').style.display = 'none';
-    document.getElementById('scheduleEditForm').reset();
+    const modal = document.getElementById('scheduleEditModal');
+    const form = document.getElementById('scheduleEditForm');
+    
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
 }
 
 async function saveSchedule(e) {
     e.preventDefault();
     
-    const week = document.getElementById('editDayWeek').value;
-    const dayIndex = parseInt(document.getElementById('editDayIndex').value);
-    const employeeId = document.getElementById('editDayEmployee').value;
-    const shiftName = document.getElementById('editShiftSelect').value;
+    const weekEl = document.getElementById('editDayWeek');
+    const dayIndexEl = document.getElementById('editDayIndex');
+    const employeeIdEl = document.getElementById('editDayEmployee');
+    const shiftNameEl = document.getElementById('editShiftSelect');
+    
+    if (!weekEl || !dayIndexEl || !employeeIdEl || !shiftNameEl) return;
+    
+    const week = weekEl.value;
+    const dayIndex = parseInt(dayIndexEl.value);
+    const employeeId = employeeIdEl.value;
+    const shiftName = shiftNameEl.value;
     
     const shiftTimes = {
         'Morning': '6:00 AM - 2:00 PM',
@@ -355,13 +435,20 @@ function getLastSaturday(date) {
 
 async function openAddModal() {
     editingEmployeeId = null;
-    document.getElementById('employeeModal').style.display = 'block';
-    document.getElementById('modalTitle').textContent = 'Add New Employee';
-    document.getElementById('employeeForm').reset();
+    const modal = document.getElementById('employeeModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const form = document.getElementById('employeeForm');
+    const employeeIdEl = document.getElementById('employeeId');
+    
+    if (modal) modal.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = 'Add New Employee';
+    if (form) form.reset();
     
     const nextId = await generateEmployeeId();
-    document.getElementById('employeeId').value = nextId;
-    document.getElementById('employeeId').readOnly = true;
+    if (employeeIdEl) {
+        employeeIdEl.value = nextId;
+        employeeIdEl.readOnly = true;
+    }
 }
 
 async function generateEmployeeId() {
@@ -386,55 +473,80 @@ function openEditModal(id) {
     if (!employee) return;
     
     editingEmployeeId = id;
-    document.getElementById('employeeModal').style.display = 'block';
-    document.getElementById('modalTitle').textContent = 'Edit Employee';
+    const modal = document.getElementById('employeeModal');
+    const modalTitle = document.getElementById('modalTitle');
     
-    document.getElementById('employeeId').value = employee.employee_id;
-    document.getElementById('employeeId').readOnly = true;
-    document.getElementById('employeeName').value = employee.name;
-    document.getElementById('position').value = employee.position;
-    document.getElementById('department').value = employee.department;
-    document.getElementById('email').value = employee.email;
-    document.getElementById('phone').value = employee.phone;
-    document.getElementById('dateHired').value = employee.date_hired;
-    document.getElementById('birthdate').value = employee.birthdate;
-    document.getElementById('address').value = employee.address;
-    document.getElementById('emergencyContact').value = employee.emergency_contact;
-    document.getElementById('emergencyPhone').value = employee.emergency_phone;
-    document.getElementById('monthlySalary').value = employee.monthly_salary;
-    document.getElementById('status').value = employee.status;
-    document.getElementById('sssNumber').value = employee.sss_number || '';
-    document.getElementById('tinNumber').value = employee.tin_number || '';
-    document.getElementById('philhealthNumber').value = employee.philhealth_number || '';
+    if (modal) modal.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = 'Edit Employee';
+    
+    // Populate form fields
+    const fields = {
+        'employeeId': employee.employee_id,
+        'employeeName': employee.name,
+        'position': employee.position,
+        'department': employee.department,
+        'email': employee.email,
+        'phone': employee.phone,
+        'dateHired': employee.date_hired,
+        'birthdate': employee.birthdate,
+        'address': employee.address,
+        'emergencyContact': employee.emergency_contact,
+        'emergencyPhone': employee.emergency_phone,
+        'monthlySalary': employee.monthly_salary,
+        'status': employee.status,
+        'sssNumber': employee.sss_number || '',
+        'tinNumber': employee.tin_number || '',
+        'philhealthNumber': employee.philhealth_number || ''
+    };
+    
+    Object.keys(fields).forEach(key => {
+        const el = document.getElementById(key);
+        if (el) el.value = fields[key];
+    });
+    
+    const employeeIdEl = document.getElementById('employeeId');
+    if (employeeIdEl) employeeIdEl.readOnly = true;
 }
 
 function closeEmployeeModal() {
-    document.getElementById('employeeModal').style.display = 'none';
-    document.getElementById('employeeForm').reset();
+    const modal = document.getElementById('employeeModal');
+    const form = document.getElementById('employeeForm');
+    
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
     editingEmployeeId = null;
 }
 
 async function saveEmployee(e) {
     e.preventDefault();
     
+    // Collect form data
     const formData = {
-        employee_id: document.getElementById('employeeId').value,
-        name: document.getElementById('employeeName').value,
-        position: document.getElementById('position').value,
-        department: document.getElementById('department').value,
-        email: document.getElementById('email').value || 'N/A',
-        phone: document.getElementById('phone').value,
-        date_hired: document.getElementById('dateHired').value,
-        birthdate: document.getElementById('birthdate').value || '1990-01-01',
-        address: document.getElementById('address').value || 'N/A',
-        emergency_contact: document.getElementById('emergencyContact').value || 'N/A',
-        emergency_phone: document.getElementById('emergencyPhone').value || 'N/A',
-        monthly_salary: document.getElementById('monthlySalary').value,
-        status: document.getElementById('status').value,
-        sss_number: document.getElementById('sssNumber').value || null,
-        tin_number: document.getElementById('tinNumber').value || null,
-        philhealth_number: document.getElementById('philhealthNumber').value || null
+        employee_id: document.getElementById('employeeId')?.value || '',
+        name: document.getElementById('employeeName')?.value || '',
+        position: document.getElementById('position')?.value || '',
+        department: document.getElementById('department')?.value || '',
+        email: document.getElementById('email')?.value || 'N/A',
+        phone: document.getElementById('phone')?.value || '',
+        date_hired: document.getElementById('dateHired')?.value || '',
+        birthdate: document.getElementById('birthdate')?.value || '1990-01-01',
+        address: document.getElementById('address')?.value || 'N/A',
+        emergency_contact: document.getElementById('emergencyContact')?.value || 'N/A',
+        emergency_phone: document.getElementById('emergencyPhone')?.value || 'N/A',
+        monthly_salary: document.getElementById('monthlySalary')?.value || '0',
+        status: document.getElementById('status')?.value || 'Active',
+        sss_number: document.getElementById('sssNumber')?.value || null,
+        tin_number: document.getElementById('tinNumber')?.value || null,
+        philhealth_number: document.getElementById('philhealthNumber')?.value || null
     };
+    
+    // Validate required fields
+    if (!formData.employee_id || !formData.name || !formData.position || 
+        !formData.department || !formData.phone || !formData.date_hired || 
+        !formData.monthly_salary) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
     
     const action = editingEmployeeId ? 'update' : 'create';
     const method = editingEmployeeId ? 'PUT' : 'POST';
@@ -463,9 +575,8 @@ async function saveEmployee(e) {
 
 function viewEmployee(id) {
     console.log('View employee:', id);
+    // Could open a detail modal or navigate to detail page
 }
-
-// DELETE FUNCTION REMOVED - NOW USING archiveEmployee() from archive-system.js
 
 async function toggleBlocklist(id, blocklist) {
     const reason = blocklist ? prompt('Enter blocklist reason:') : null;
@@ -498,16 +609,19 @@ async function toggleBlocklist(id, blocklist) {
 
 function showBlocklistedOnly() {
     viewingBlocklisted = !viewingBlocklisted;
-    const btn = document.querySelector('.blocklisted-view-btn');
+    const btn = document.getElementById('blocklistToggleBtn');
+    const filterStatus = document.getElementById('filterStatus');
+    
+    if (!btn || !filterStatus) return;
     
     if (viewingBlocklisted) {
         btn.classList.add('active');
         btn.innerHTML = '<i class="fas fa-users"></i> View All';
-        document.getElementById('filterStatus').value = 'Blocklisted';
+        filterStatus.value = 'Blocklisted';
     } else {
         btn.classList.remove('active');
         btn.innerHTML = '<i class="fas fa-ban"></i> View Blocklisted';
-        document.getElementById('filterStatus').value = 'all';
+        filterStatus.value = 'all';
     }
     
     renderEmployees();
@@ -527,15 +641,18 @@ function showNotification(message, type = 'success') {
         animation: slideIn 0.3s ease;
         background: ${type === 'success' ? '#28a745' : '#dc3545'};
         color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.remove();
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
+// Window click handler for modals
 window.onclick = (event) => {
     const employeeModal = document.getElementById('employeeModal');
     const scheduleModal = document.getElementById('scheduleModal');
@@ -552,10 +669,10 @@ window.onclick = (event) => {
     }
 };
 
+// Export functions for global access
 window.openScheduleModal = openScheduleModal;
 window.editScheduleDay = editScheduleDay;
 window.openEditModal = openEditModal;
 window.toggleBlocklist = toggleBlocklist;
 window.viewEmployee = viewEmployee;
 window.closeScheduleEditModal = closeScheduleEditModal;
-window.saveSchedule = saveSchedule;

@@ -1046,3 +1046,154 @@ body {
         font-size: 13px;
     }
 }
+
+/* ========================================
+   EMPLOYEES PAGE - ADDITIONAL STYLES
+   Add to employees.css or inline in <style> tag
+   ======================================== */
+
+/* Schedule Section Styles */
+.schedule-section {
+    margin-bottom: 30px;
+}
+
+.schedule-section h3 {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.schedule-table th,
+.schedule-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.schedule-table th {
+    background-color: #f8f9fa;
+    font-weight: 500;
+    color: #333;
+}
+
+.schedule-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.schedule-edit-btn {
+    background-color: #222;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+
+.schedule-edit-btn:hover {
+    background-color: #111;
+}
+
+.schedule-edit-btn i {
+    font-size: 12px;
+}
+
+/* Day Name Display */
+.day-name-display {
+    font-size: 18px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-align: center;
+}
+
+/* Modal Overrides for Schedule */
+#scheduleModal .modal-content {
+    max-width: 900px;
+}
+
+#scheduleEditModal .modal-content {
+    max-width: 500px;
+}
+
+/* Employee Card Schedule Icon */
+.employee-card .icon-btn[title="Manage Schedule"] {
+    color: #17a2b8;
+}
+
+.employee-card .icon-btn[title="Manage Schedule"]:hover {
+    color: #138496;
+}
+
+/* Form Grid Styles */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.required {
+    color: #dc3545;
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal {
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    animation: slideDown 0.3s;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .schedule-section {
+        overflow-x: auto;
+    }
+    
+    .schedule-table {
+        min-width: 600px;
+    }
+}
