@@ -243,6 +243,9 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Fixed Schedule Management Functions for employees.js
+// Add these functions to your employees.js file or replace the existing ones
+
 async function openScheduleModal(employeeId, employeeName) {
     currentScheduleEmployee = employeeId;
     const nameEl = document.getElementById('scheduleEmployeeName');
@@ -250,6 +253,18 @@ async function openScheduleModal(employeeId, employeeName) {
     
     if (nameEl) nameEl.textContent = employeeName;
     if (modal) modal.style.display = 'block';
+    
+    // Show loading state
+    document.getElementById('currentWeekScheduleBody').innerHTML = `
+        <tr><td colspan="4" style="text-align: center; padding: 20px;">
+            <i class="fas fa-spinner fa-spin"></i> Loading current week...
+        </td></tr>
+    `;
+    document.getElementById('nextWeekScheduleBody').innerHTML = `
+        <tr><td colspan="4" style="text-align: center; padding: 20px;">
+            <i class="fas fa-spinner fa-spin"></i> Loading next week...
+        </td></tr>
+    `;
     
     await loadEmployeeSchedule(employeeId);
 }
@@ -262,14 +277,16 @@ function closeScheduleModal() {
 
 async function loadEmployeeSchedule(employeeId) {
     try {
-        const currentResponse = await fetch(`${SCHEDULE_API}?action=current`);
+        const currentResponse = await fetch(`${SCHEDULE_API}?action=current&t=${Date.now()}`);
         const currentResult = await currentResponse.json();
         
-        const nextResponse = await fetch(`${SCHEDULE_API}?action=next`);
+        const nextResponse = await fetch(`${SCHEDULE_API}?action=next&t=${Date.now()}`);
         const nextResult = await nextResponse.json();
         
         if (currentResult.success && nextResult.success) {
             renderEmployeeSchedule(employeeId, currentResult.data, nextResult.data);
+        } else {
+            showNotification('Failed to load schedule', 'error');
         }
     } catch (error) {
         console.error('Error loading schedule:', error);
@@ -287,11 +304,17 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
     const nextDays = Array(7).fill(null);
     
     currentSchedule.forEach(s => {
-        currentDays[s.day_of_week] = s;
+        const dayIndex = parseInt(s.day_of_week);
+        if (dayIndex >= 0 && dayIndex < 7) {
+            currentDays[dayIndex] = s;
+        }
     });
     
     nextSchedule.forEach(s => {
-        nextDays[s.day_of_week] = s;
+        const dayIndex = parseInt(s.day_of_week);
+        if (dayIndex >= 0 && dayIndex < 7) {
+            nextDays[dayIndex] = s;
+        }
     });
     
     const currentBody = document.getElementById('currentWeekScheduleBody');
@@ -365,12 +388,20 @@ async function saveSchedule(e) {
     const employeeIdEl = document.getElementById('editDayEmployee');
     const shiftNameEl = document.getElementById('editShiftSelect');
     
-    if (!weekEl || !dayIndexEl || !employeeIdEl || !shiftNameEl) return;
+    if (!weekEl || !dayIndexEl || !employeeIdEl || !shiftNameEl) {
+        showNotification('Form elements not found', 'error');
+        return;
+    }
     
     const week = weekEl.value;
     const dayIndex = parseInt(dayIndexEl.value);
     const employeeId = employeeIdEl.value;
     const shiftName = shiftNameEl.value;
+    
+    if (!shiftName) {
+        showNotification('Please select a shift', 'error');
+        return;
+    }
     
     const shiftTimes = {
         'Morning': '6:00 AM - 2:00 PM',
@@ -394,6 +425,15 @@ async function saveSchedule(e) {
         is_next_week: week === 'next' ? 1 : 0
     };
     
+    console.log('💾 Saving schedule:', data);
+    
+    // Disable submit button
+    const submitBtn = document.querySelector('#scheduleEditForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+    
     try {
         const response = await fetch(`${SCHEDULE_API}?action=update`, {
             method: 'POST',
@@ -404,15 +444,30 @@ async function saveSchedule(e) {
         const result = await response.json();
         
         if (result.success) {
-            showNotification('Schedule updated successfully!', 'success');
+            showNotification('✅ Schedule updated successfully!', 'success');
             closeScheduleEditModal();
+            
+            // Force reload the employee schedule with cache busting
+            console.log('🔄 Reloading employee schedule...');
             await loadEmployeeSchedule(employeeId);
+            
+            console.log('✅ Schedule reloaded!');
         } else {
-            showNotification(result.message || 'Failed to update schedule', 'error');
+            showNotification('❌ ' + (result.message || 'Failed to update schedule'), 'error');
+            // Re-enable button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Schedule';
+            }
         }
     } catch (error) {
         console.error('Error saving schedule:', error);
-        showNotification('Failed to update schedule', 'error');
+        showNotification('❌ Failed to update schedule', 'error');
+        // Re-enable button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Schedule';
+        }
     }
 }
 
@@ -433,204 +488,16 @@ function getLastSaturday(date) {
     return d;
 }
 
-async function openAddModal() {
-    editingEmployeeId = null;
-    const modal = document.getElementById('employeeModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const form = document.getElementById('employeeForm');
-    const employeeIdEl = document.getElementById('employeeId');
-    
-    if (modal) modal.style.display = 'block';
-    if (modalTitle) modalTitle.textContent = 'Add New Employee';
-    if (form) form.reset();
-    
-    const nextId = await generateEmployeeId();
-    if (employeeIdEl) {
-        employeeIdEl.value = nextId;
-        employeeIdEl.readOnly = true;
-    }
-}
-
-async function generateEmployeeId() {
-    let maxNumber = 0;
-    
-    employees.forEach(emp => {
-        const match = emp.employee_id.match(/EMP(\d+)/);
-        if (match) {
-            const num = parseInt(match[1]);
-            if (num > maxNumber) {
-                maxNumber = num;
-            }
-        }
-    });
-    
-    const nextNumber = maxNumber + 1;
-    return `EMP${String(nextNumber).padStart(3, '0')}`;
-}
-
-function openEditModal(id) {
-    const employee = employees.find(e => e.employee_id === id);
-    if (!employee) return;
-    
-    editingEmployeeId = id;
-    const modal = document.getElementById('employeeModal');
-    const modalTitle = document.getElementById('modalTitle');
-    
-    if (modal) modal.style.display = 'block';
-    if (modalTitle) modalTitle.textContent = 'Edit Employee';
-    
-    // Populate form fields
-    const fields = {
-        'employeeId': employee.employee_id,
-        'employeeName': employee.name,
-        'position': employee.position,
-        'department': employee.department,
-        'email': employee.email,
-        'phone': employee.phone,
-        'dateHired': employee.date_hired,
-        'birthdate': employee.birthdate,
-        'address': employee.address,
-        'emergencyContact': employee.emergency_contact,
-        'emergencyPhone': employee.emergency_phone,
-        'monthlySalary': employee.monthly_salary,
-        'status': employee.status,
-        'sssNumber': employee.sss_number || '',
-        'tinNumber': employee.tin_number || '',
-        'philhealthNumber': employee.philhealth_number || ''
-    };
-    
-    Object.keys(fields).forEach(key => {
-        const el = document.getElementById(key);
-        if (el) el.value = fields[key];
-    });
-    
-    const employeeIdEl = document.getElementById('employeeId');
-    if (employeeIdEl) employeeIdEl.readOnly = true;
-}
-
-function closeEmployeeModal() {
-    const modal = document.getElementById('employeeModal');
-    const form = document.getElementById('employeeForm');
-    
-    if (modal) modal.style.display = 'none';
-    if (form) form.reset();
-    editingEmployeeId = null;
-}
-
-async function saveEmployee(e) {
-    e.preventDefault();
-    
-    // Collect form data
-    const formData = {
-        employee_id: document.getElementById('employeeId')?.value || '',
-        name: document.getElementById('employeeName')?.value || '',
-        position: document.getElementById('position')?.value || '',
-        department: document.getElementById('department')?.value || '',
-        email: document.getElementById('email')?.value || 'N/A',
-        phone: document.getElementById('phone')?.value || '',
-        date_hired: document.getElementById('dateHired')?.value || '',
-        birthdate: document.getElementById('birthdate')?.value || '1990-01-01',
-        address: document.getElementById('address')?.value || 'N/A',
-        emergency_contact: document.getElementById('emergencyContact')?.value || 'N/A',
-        emergency_phone: document.getElementById('emergencyPhone')?.value || 'N/A',
-        monthly_salary: document.getElementById('monthlySalary')?.value || '0',
-        status: document.getElementById('status')?.value || 'Active',
-        sss_number: document.getElementById('sssNumber')?.value || null,
-        tin_number: document.getElementById('tinNumber')?.value || null,
-        philhealth_number: document.getElementById('philhealthNumber')?.value || null
-    };
-    
-    // Validate required fields
-    if (!formData.employee_id || !formData.name || !formData.position || 
-        !formData.department || !formData.phone || !formData.date_hired || 
-        !formData.monthly_salary) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    const action = editingEmployeeId ? 'update' : 'create';
-    const method = editingEmployeeId ? 'PUT' : 'POST';
-    
-    try {
-        const response = await fetch(`${API_URL}?action=${action}`, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(result.message, 'success');
-            closeEmployeeModal();
-            await loadEmployees();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error saving employee:', error);
-        showNotification('Failed to save employee', 'error');
-    }
-}
-
-function viewEmployee(id) {
-    console.log('View employee:', id);
-    // Could open a detail modal or navigate to detail page
-}
-
-async function toggleBlocklist(id, blocklist) {
-    const reason = blocklist ? prompt('Enter blocklist reason:') : null;
-    if (blocklist && !reason) return;
-    
-    try {
-        const response = await fetch(`${API_URL}?action=blocklist`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                employee_id: id,
-                blocklist: blocklist,
-                reason: reason
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(result.message, 'success');
-            await loadEmployees();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error updating blocklist:', error);
-        showNotification('Failed to update employee status', 'error');
-    }
-}
-
-function showBlocklistedOnly() {
-    viewingBlocklisted = !viewingBlocklisted;
-    const btn = document.getElementById('blocklistToggleBtn');
-    const filterStatus = document.getElementById('filterStatus');
-    
-    if (!btn || !filterStatus) return;
-    
-    if (viewingBlocklisted) {
-        btn.classList.add('active');
-        btn.innerHTML = '<i class="fas fa-users"></i> View All';
-        filterStatus.value = 'Blocklisted';
-    } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '<i class="fas fa-ban"></i> View Blocklisted';
-        filterStatus.value = 'all';
-    }
-    
-    renderEmployees();
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
-    notification.textContent = message;
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -642,6 +509,14 @@ function showNotification(message, type = 'success') {
         background: ${type === 'success' ? '#28a745' : '#dc3545'};
         color: white;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 400px;
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
     `;
     
     document.body.appendChild(notification);
@@ -652,27 +527,23 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Window click handler for modals
-window.onclick = (event) => {
-    const employeeModal = document.getElementById('employeeModal');
-    const scheduleModal = document.getElementById('scheduleModal');
-    const scheduleEditModal = document.getElementById('scheduleEditModal');
-    
-    if (event.target === employeeModal) {
-        closeEmployeeModal();
+// CSS for animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
-    if (event.target === scheduleModal) {
-        closeScheduleModal();
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
     }
-    if (event.target === scheduleEditModal) {
-        closeScheduleEditModal();
-    }
-};
+`;
+document.head.appendChild(style);
 
-// Export functions for global access
+// Make functions globally accessible
 window.openScheduleModal = openScheduleModal;
 window.editScheduleDay = editScheduleDay;
-window.openEditModal = openEditModal;
-window.toggleBlocklist = toggleBlocklist;
-window.viewEmployee = viewEmployee;
 window.closeScheduleEditModal = closeScheduleEditModal;
+
+console.log('✅ Employee schedule manager loaded with auto-refresh');

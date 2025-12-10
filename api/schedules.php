@@ -1,4 +1,5 @@
 <?php
+// api/schedules.php - FIXED VERSION with better error handling
 require_once '../config/config.php';
 requireLogin();
 
@@ -7,9 +8,9 @@ $db = $database->connect();
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
-// Enable error reporting for debugging
+// Enable detailed error logging
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display to user
+ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 // Set JSON header
@@ -18,26 +19,24 @@ header('Content-Type: application/json');
 try {
     // Compute current week start (Saturday)
     $today = new DateTime();
-    $weekday = (int)$today->format('w'); // 0 (Sun) - 6 (Sat)
+    $weekday = (int)$today->format('w');
     
-    // Calculate days to subtract to get to last Saturday
     if ($weekday === 6) {
-        $daysToSubtract = 0; // Already Saturday
+        $daysToSubtract = 0;
     } else if ($weekday === 0) {
-        $daysToSubtract = 1; // Sunday
+        $daysToSubtract = 1;
     } else {
-        $daysToSubtract = $weekday + 1; // Mon(1)→2, Tue(2)→3, etc.
+        $daysToSubtract = $weekday + 1;
     }
     
     $currentWeekStart = date('Y-m-d', strtotime("-{$daysToSubtract} days"));
     $nextWeekStart = date('Y-m-d', strtotime($currentWeekStart . ' +7 days'));
     
-    error_log("=== SCHEDULE API DEBUG ===");
-    error_log("Today: " . $today->format('Y-m-d') . " (day " . $weekday . ")");
-    error_log("Days to subtract: $daysToSubtract");
+    error_log("=== SCHEDULE API ===");
+    error_log("Action: $action");
+    error_log("Method: $method");
     error_log("Current Saturday: $currentWeekStart");
     error_log("Next Saturday: $nextWeekStart");
-    error_log("Action: $action");
 
     if ($action === 'current') {
         // Fetch current week schedules
@@ -64,16 +63,6 @@ try {
         $results = $stmt->fetchAll();
         
         error_log("Current week query returned: " . count($results) . " rows");
-        error_log("SQL: week_start_date = '$currentWeekStart' AND is_next_week = 0");
-        
-        // Debug: Check what dates exist in database
-        $debugStmt = $db->query("
-            SELECT DISTINCT week_start_date, is_next_week, COUNT(*) as count 
-            FROM schedules 
-            GROUP BY week_start_date, is_next_week
-        ");
-        $debugResults = $debugStmt->fetchAll();
-        error_log("Available dates in DB: " . json_encode($debugResults));
         
         jsonResponse(true, 'Current week schedule retrieved', $results);
 
@@ -102,120 +91,159 @@ try {
         $results = $stmt->fetchAll();
         
         error_log("Next week query returned: " . count($results) . " rows");
-        error_log("SQL: week_start_date = '$nextWeekStart' AND is_next_week = 1");
         
         jsonResponse(true, 'Next week schedule retrieved', $results);
 
     } elseif ($action === 'update' && $method === 'POST') {
-        $data = json_decode(file_get_contents('php://input'), true);
+        // FIXED UPDATE LOGIC
+        $rawInput = file_get_contents('php://input');
+        error_log("Raw input: " . $rawInput);
         
-        error_log("Update request data: " . json_encode($data));
+        $data = json_decode($rawInput, true);
         
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON decode error: " . json_last_error_msg());
+            jsonResponse(false, 'Invalid JSON data');
+            exit;
+        }
+        
+        error_log("Decoded data: " . print_r($data, true));
+        
+        // Validate required fields
         if (!isset($data['employee_id']) || !isset($data['week_start']) || 
             !isset($data['day']) || !isset($data['shift_name']) || !isset($data['shift_time'])) {
-            jsonResponse(false, 'Missing required fields');
+            error_log("Missing required fields");
+            jsonResponse(false, 'Missing required fields: employee_id, week_start, day, shift_name, shift_time');
             exit;
         }
 
-        // Check if schedule already exists
+        $employeeId = $data['employee_id'];
+        $weekStart = $data['week_start'];
+        $dayOfWeek = (int)$data['day'];
+        $shiftName = $data['shift_name'];
+        $shiftTime = $data['shift_time'];
+        $isNextWeek = isset($data['is_next_week']) ? (int)$data['is_next_week'] : 0;
+
+        error_log("Processing update:");
+        error_log("  Employee ID: $employeeId");
+        error_log("  Week Start: $weekStart");
+        error_log("  Day: $dayOfWeek");
+        error_log("  Shift: $shiftName");
+        error_log("  Is Next Week: $isNextWeek");
+
+        // Check if schedule already exists - FIXED to prevent duplicates
         $checkStmt = $db->prepare("
-            SELECT schedule_id FROM schedules 
+            SELECT schedule_id, shift_name, shift_time FROM schedules 
             WHERE employee_id = ? 
             AND week_start_date = ? 
             AND day_of_week = ? 
             AND is_next_week = ?
         ");
-        $checkStmt->execute([
-            $data['employee_id'],
-            $data['week_start'],
-            $data['day'],
-            $data['is_next_week'] ?? 0
-        ]);
-        
+        $checkStmt->execute([$employeeId, $weekStart, $dayOfWeek, $isNextWeek]);
         $existing = $checkStmt->fetch();
         
+        error_log("Check existing - employee_id: $employeeId, week_start: $weekStart, day: $dayOfWeek, is_next: $isNextWeek");
+        error_log("Existing record: " . ($existing ? "Found (ID: {$existing['schedule_id']})" : "Not found"));
+        
         if ($existing) {
-            // Update existing schedule
-            $stmt = $db->prepare("
+            // UPDATE existing schedule
+            error_log("Updating existing schedule_id: " . $existing['schedule_id']);
+            
+            $updateStmt = $db->prepare("
                 UPDATE schedules 
-                SET shift_name = ?, shift_time = ?, updated_at = NOW()
+                SET shift_name = ?, 
+                    shift_time = ?, 
+                    updated_at = NOW()
                 WHERE schedule_id = ?
             ");
             
-            $result = $stmt->execute([
-                $data['shift_name'],
-                $data['shift_time'],
+            $result = $updateStmt->execute([
+                $shiftName,
+                $shiftTime,
                 $existing['schedule_id']
             ]);
             
-            error_log("Updated schedule_id: " . $existing['schedule_id']);
+            if ($result) {
+                error_log("✅ Successfully updated schedule");
+                logAudit($db, 'system', 'Schedule Updated', 
+                    "Updated schedule for employee {$employeeId} - Day {$dayOfWeek}: {$shiftName}", 
+                    'fa-calendar');
+                jsonResponse(true, 'Schedule updated successfully');
+            } else {
+                error_log("❌ Failed to update schedule");
+                $errorInfo = $updateStmt->errorInfo();
+                error_log("PDO Error: " . print_r($errorInfo, true));
+                jsonResponse(false, 'Failed to update schedule: ' . $errorInfo[2]);
+            }
         } else {
-            // Insert new schedule
-            $stmt = $db->prepare("
+            // INSERT new schedule
+            error_log("Inserting new schedule entry");
+            
+            $insertStmt = $db->prepare("
                 INSERT INTO schedules 
                 (employee_id, week_start_date, day_of_week, shift_name, shift_time, is_next_week)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             
-            $result = $stmt->execute([
-                $data['employee_id'],
-                $data['week_start'],
-                $data['day'],
-                $data['shift_name'],
-                $data['shift_time'],
-                $data['is_next_week'] ?? 0
+            $result = $insertStmt->execute([
+                $employeeId,
+                $weekStart,
+                $dayOfWeek,
+                $shiftName,
+                $shiftTime,
+                $isNextWeek
             ]);
             
-            error_log("Inserted new schedule for employee: " . $data['employee_id']);
-        }
-
-        if ($result) {
-            logAudit($db, 'system', 'Schedule Updated', 
-                "Updated schedule for employee {$data['employee_id']} - Day {$data['day']}: {$data['shift_name']}", 
-                'fa-calendar');
-            
-            jsonResponse(true, 'Schedule updated successfully');
-        } else {
-            error_log("Failed to update schedule");
-            jsonResponse(false, 'Failed to update schedule');
+            if ($result) {
+                error_log("✅ Successfully inserted new schedule");
+                logAudit($db, 'system', 'Schedule Created', 
+                    "Created schedule for employee {$employeeId} - Day {$dayOfWeek}: {$shiftName}", 
+                    'fa-calendar');
+                jsonResponse(true, 'Schedule created successfully');
+            } else {
+                error_log("❌ Failed to insert schedule");
+                $errorInfo = $insertStmt->errorInfo();
+                error_log("PDO Error: " . print_r($errorInfo, true));
+                jsonResponse(false, 'Failed to create schedule: ' . $errorInfo[2]);
+            }
         }
 
     } elseif ($action === 'copy' && $method === 'POST') {
-        // Copy current week schedules to next week (overwrite)
+        // Copy current week schedules to next week
         try {
             $db->beginTransaction();
 
             // Delete existing next week schedules
-            $del = $db->prepare("DELETE FROM schedules WHERE week_start_date = ? AND is_next_week = 1");
-            $del->execute([$nextWeekStart]);
+            $delStmt = $db->prepare("DELETE FROM schedules WHERE week_start_date = ? AND is_next_week = 1");
+            $delStmt->execute([$nextWeekStart]);
             
             error_log("Deleted old next week schedules");
 
             // Copy current week entries to next week
-            $sel = $db->prepare("
+            $selStmt = $db->prepare("
                 SELECT employee_id, day_of_week, shift_name, shift_time 
                 FROM schedules 
                 WHERE week_start_date = ? AND is_next_week = 0
             ");
-            $sel->execute([$currentWeekStart]);
-            $rows = $sel->fetchAll();
+            $selStmt->execute([$currentWeekStart]);
+            $rows = $selStmt->fetchAll();
             
             error_log("Found " . count($rows) . " schedules to copy");
 
             if (count($rows) === 0) {
                 $db->rollBack();
-                jsonResponse(false, 'No schedules found to copy. Please create current week schedule first.');
+                jsonResponse(false, 'No schedules found to copy');
                 exit;
             }
 
-            $ins = $db->prepare("
+            $insStmt = $db->prepare("
                 INSERT INTO schedules 
                 (employee_id, week_start_date, day_of_week, shift_name, shift_time, is_next_week) 
                 VALUES (?, ?, ?, ?, ?, 1)
             ");
             
             foreach ($rows as $r) {
-                $ins->execute([
+                $insStmt->execute([
                     $r['employee_id'], 
                     $nextWeekStart, 
                     $r['day_of_week'], 
@@ -257,87 +285,18 @@ try {
             jsonResponse(false, 'Failed to clear schedule: ' . $e->getMessage());
         }
 
-    } elseif ($action === 'populate_sample' && $method === 'POST') {
-        // HELPER: Populate sample schedules for testing
-        try {
-            $db->beginTransaction();
-            
-            // Get all active employees
-            $empStmt = $db->query("SELECT employee_id FROM employees WHERE status = 'Active'");
-            $employees = $empStmt->fetchAll();
-            
-            if (count($employees) === 0) {
-                $db->rollBack();
-                jsonResponse(false, 'No active employees found');
-                exit;
-            }
-            
-            // Delete existing schedules for current week
-            $delStmt = $db->prepare("DELETE FROM schedules WHERE week_start_date = ? AND is_next_week = 0");
-            $delStmt->execute([$currentWeekStart]);
-            
-            // Insert sample schedules
-            $shifts = [
-                ['Morning', '6:00 AM - 2:00 PM'],
-                ['Afternoon', '2:00 PM - 10:00 PM'],
-                ['Night', '10:00 PM - 6:00 AM']
-            ];
-            
-            $insStmt = $db->prepare("
-                INSERT INTO schedules 
-                (employee_id, week_start_date, day_of_week, shift_name, shift_time, is_next_week)
-                VALUES (?, ?, ?, ?, ?, 0)
-            ");
-            
-            $count = 0;
-            foreach ($employees as $emp) {
-                for ($day = 0; $day < 7; $day++) {
-                    if ($day === 6) { // Friday off
-                        $insStmt->execute([
-                            $emp['employee_id'],
-                            $currentWeekStart,
-                            $day,
-                            'Off',
-                            'Day Off'
-                        ]);
-                    } else {
-                        $shiftIndex = ($day + array_search($emp['employee_id'], array_column($employees, 'employee_id'))) % 3;
-                        $shift = $shifts[$shiftIndex];
-                        $insStmt->execute([
-                            $emp['employee_id'],
-                            $currentWeekStart,
-                            $day,
-                            $shift[0],
-                            $shift[1]
-                        ]);
-                    }
-                    $count++;
-                }
-            }
-            
-            $db->commit();
-            
-            jsonResponse(true, "Populated $count sample schedules for current week", [
-                'week_start' => $currentWeekStart,
-                'employees' => count($employees),
-                'schedules' => $count
-            ]);
-            
-        } catch (Exception $e) {
-            $db->rollBack();
-            error_log("Populate error: " . $e->getMessage());
-            jsonResponse(false, 'Failed to populate: ' . $e->getMessage());
-        }
-
     } else {
+        error_log("Invalid action or method: $action / $method");
         jsonResponse(false, 'Invalid action or method');
     }
 
 } catch (PDOException $e) {
     error_log("Database error: " . $e->getMessage());
-    jsonResponse(false, 'Database error occurred');
+    error_log("Stack trace: " . $e->getTraceAsString());
+    jsonResponse(false, 'Database error occurred: ' . $e->getMessage());
 } catch (Exception $e) {
     error_log("General error: " . $e->getMessage());
-    jsonResponse(false, 'An error occurred');
+    error_log("Stack trace: " . $e->getTraceAsString());
+    jsonResponse(false, 'An error occurred: ' . $e->getMessage());
 }
 ?>

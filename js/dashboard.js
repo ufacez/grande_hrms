@@ -1,13 +1,16 @@
-// js/dashboard.js - Fixed Dashboard with Better Error Handling
+// js/dashboard.js - FIXED VERSION with proper schedule updates
 
 const SCHEDULE_API = '../api/schedules.php';
 const EMPLOYEES_API = '../api/employees.php';
 let currentWeekSchedule = [];
 let nextWeekSchedule = [];
 let allEmployees = [];
+let currentEditingEmployee = null;
+let currentEditingDay = null;
+let currentEditingWeek = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard initializing...');
+    console.log('🚀 Dashboard initializing...');
     initializeDashboard();
     setupEventListeners();
 });
@@ -39,10 +42,18 @@ function setupEventListeners() {
     document.getElementById('confirmLogoutBtn')?.addEventListener('click', () => {
         window.location.href = '../logout.php';
     });
+    
+    // Modal close on outside click
+    window.onclick = (event) => {
+        const modal = document.getElementById('scheduleModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
 }
 
 async function initializeDashboard() {
-    console.log('Starting dashboard initialization...');
+    console.log('📅 Starting dashboard initialization...');
     updateWeekRanges();
     await loadEmployees();
     await loadCurrentSchedule();
@@ -58,7 +69,7 @@ function updateWeekRanges() {
     const weekRangeText = formatWeekRange(currentSaturday);
     const nextWeekRangeText = formatWeekRange(nextSaturday);
     
-    console.log('Week ranges:', { current: weekRangeText, next: nextWeekRangeText });
+    console.log('📆 Week ranges:', { current: weekRangeText, next: nextWeekRangeText });
     
     const weekRangeEl = document.getElementById('weekRange');
     const nextWeekRangeEl = document.getElementById('nextWeekRange');
@@ -73,15 +84,14 @@ function getLastSaturday(date) {
     
     let daysToSubtract;
     if (day === 6) {
-        daysToSubtract = 0; // Already Saturday
+        daysToSubtract = 0;
     } else if (day === 0) {
-        daysToSubtract = 1; // Sunday
+        daysToSubtract = 1;
     } else {
-        daysToSubtract = day + 1; // Monday(1)→2, etc.
+        daysToSubtract = day + 1;
     }
     
     d.setDate(d.getDate() - daysToSubtract);
-    console.log(`Calculated Saturday: ${d.toISOString().split('T')[0]} (from day ${day}, subtract ${daysToSubtract})`);
     return d;
 }
 
@@ -94,132 +104,84 @@ function formatWeekRange(startDate) {
 }
 
 async function loadEmployees() {
-    console.log('Loading employees...');
+    console.log('👥 Loading employees...');
     try {
         const response = await fetch(`${EMPLOYEES_API}?action=list&status=Active`);
-        const text = await response.text();
-        console.log('Employees API raw response:', text.substring(0, 200));
-        
-        const result = JSON.parse(text);
+        const result = await response.json();
         
         if (result.success) {
             allEmployees = result.data || [];
             console.log(`✅ Loaded ${allEmployees.length} employees`);
         } else {
-            console.error('❌ Employees API error:', result.message);
+            console.error('❌ Failed to load employees:', result.message);
+            showNotification('Failed to load employees', 'error');
         }
     } catch (error) {
         console.error('❌ Error loading employees:', error);
-        showNotification('Failed to load employees: ' + error.message, 'error');
+        showNotification('Failed to load employees', 'error');
     }
 }
 
 async function loadCurrentSchedule() {
-    console.log('Loading current week schedule...');
+    console.log('📋 Loading current week schedule...');
     const tbody = document.getElementById('scheduleTableBody');
     
     if (!tbody) {
-        console.error('scheduleTableBody not found!');
+        console.error('❌ scheduleTableBody not found!');
         return;
     }
     
     try {
         const response = await fetch(`${SCHEDULE_API}?action=current`);
-        const text = await response.text();
-        console.log('Current schedule API raw response:', text.substring(0, 500));
-        
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (e) {
-            console.error('❌ Invalid JSON response:', text);
-            tbody.innerHTML = `
-                <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc3545;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    <p>API Error: Invalid response format</p>
-                    <small>Check browser console for details</small>
-                </td></tr>
-            `;
-            return;
-        }
+        const result = await response.json();
         
         if (result.success) {
             currentWeekSchedule = result.data || [];
-            console.log(`✅ Loaded ${currentWeekSchedule.length} current week schedules`);
-            
-            if (currentWeekSchedule.length > 0) {
-                console.log('Sample schedule entry:', currentWeekSchedule[0]);
-            }
-            
+            console.log(`✅ Loaded ${currentWeekSchedule.length} current week entries`);
             renderSchedule(currentWeekSchedule, 'scheduleTableBody', false);
         } else {
-            console.error('❌ Current schedule API error:', result.message);
+            console.error('❌ Current schedule error:', result.message);
             renderEmptySchedule('scheduleTableBody', result.message);
         }
     } catch (error) {
         console.error('❌ Error loading current schedule:', error);
-        tbody.innerHTML = `
-            <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc3545;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                <p>Error: ${error.message}</p>
-            </td></tr>
-        `;
+        renderEmptySchedule('scheduleTableBody', 'Failed to load schedule');
     }
 }
 
 async function loadNextSchedule() {
-    console.log('Loading next week schedule...');
+    console.log('📋 Loading next week schedule...');
     const tbody = document.getElementById('nextScheduleTableBody');
     
     if (!tbody) {
-        console.error('nextScheduleTableBody not found!');
+        console.error('❌ nextScheduleTableBody not found!');
         return;
     }
     
     try {
         const response = await fetch(`${SCHEDULE_API}?action=next`);
-        const text = await response.text();
-        console.log('Next schedule API raw response:', text.substring(0, 500));
-        
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (e) {
-            console.error('❌ Invalid JSON response:', text);
-            tbody.innerHTML = `
-                <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc3545;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    <p>API Error: Invalid response format</p>
-                </td></tr>
-            `;
-            return;
-        }
+        const result = await response.json();
         
         if (result.success) {
             nextWeekSchedule = result.data || [];
-            console.log(`✅ Loaded ${nextWeekSchedule.length} next week schedules`);
+            console.log(`✅ Loaded ${nextWeekSchedule.length} next week entries`);
             renderSchedule(nextWeekSchedule, 'nextScheduleTableBody', true);
         } else {
-            console.error('❌ Next schedule API error:', result.message);
+            console.error('❌ Next schedule error:', result.message);
             renderEmptySchedule('nextScheduleTableBody', result.message);
         }
     } catch (error) {
         console.error('❌ Error loading next schedule:', error);
-        tbody.innerHTML = `
-            <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc3545;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                <p>Error: ${error.message}</p>
-            </td></tr>
-        `;
+        renderEmptySchedule('nextScheduleTableBody', 'Failed to load schedule');
     }
 }
 
 function renderSchedule(data, tableBodyId, isNextWeek) {
-    console.log(`Rendering ${isNextWeek ? 'next' : 'current'} week schedule with ${data.length} entries`);
+    console.log(`🎨 Rendering ${isNextWeek ? 'next' : 'current'} week schedule (${data.length} entries)`);
     
     const tbody = document.getElementById(tableBodyId);
     if (!tbody) {
-        console.error(`Table body ${tableBodyId} not found!`);
+        console.error(`❌ Table body ${tableBodyId} not found!`);
         return;
     }
     
@@ -233,20 +195,16 @@ function renderSchedule(data, tableBodyId, isNextWeek) {
             };
         }
         
-        // Ensure day_of_week is a number
         const dayIndex = parseInt(item.day_of_week);
         if (dayIndex >= 0 && dayIndex < 7) {
             employeeSchedules[item.employee_id].days[dayIndex] = {
                 shift_name: item.shift_name,
                 shift_time: item.shift_time
             };
-        } else {
-            console.warn(`Invalid day_of_week: ${item.day_of_week}`, item);
         }
     });
     
     const employeeCount = Object.keys(employeeSchedules).length;
-    console.log(`Grouped into ${employeeCount} employees`);
     
     if (employeeCount === 0) {
         renderEmptySchedule(tableBodyId);
@@ -255,12 +213,12 @@ function renderSchedule(data, tableBodyId, isNextWeek) {
     
     tbody.innerHTML = Object.entries(employeeSchedules).map(([empId, schedule]) => `
         <tr>
-            <td style="font-weight: bold; background-color: #f8f9fa;">${schedule.name}</td>
+            <td style="font-weight: bold; background-color: #f8f9fa;">${escapeHtml(schedule.name)}</td>
             ${schedule.days.map((day, index) => `
                 <td class="${day ? getShiftClass(day.shift_name) : 'day-off'}" style="position: relative;">
                     ${day ? `
-                        <div style="font-weight: 500; font-size: 13px;">${day.shift_name}</div>
-                        <small style="opacity: 0.7; font-size: 11px; display: block; margin-top: 2px;">${day.shift_time}</small>
+                        <div style="font-weight: 500; font-size: 13px;">${escapeHtml(day.shift_name)}</div>
+                        <small style="opacity: 0.7; font-size: 11px; display: block; margin-top: 2px;">${escapeHtml(day.shift_time)}</small>
                     ` : '<span style="color: #999;">Day Off</span>'}
                     <button class="edit-shift" onclick="openScheduleModal('${empId}', ${index}, '${isNextWeek ? 'next' : 'current'}', '${escapeHtml(schedule.name)}')" title="Edit">
                         <i class="fas fa-edit"></i>
@@ -270,7 +228,7 @@ function renderSchedule(data, tableBodyId, isNextWeek) {
         </tr>
     `).join('');
     
-    console.log(`✅ Rendered ${employeeCount} employee schedules to ${tableBodyId}`);
+    console.log(`✅ Rendered ${employeeCount} employee schedules`);
 }
 
 function renderEmptySchedule(tableBodyId, message = null) {
@@ -283,7 +241,7 @@ function renderEmptySchedule(tableBodyId, message = null) {
         <tr>
             <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
                 <i class="fas fa-calendar-times" style="font-size: 48px; display: block; margin-bottom: 10px; opacity: 0.3;"></i>
-                <p style="margin: 0; font-size: 16px;">${displayMessage}</p>
+                <p style="margin: 0; font-size: 16px;">${escapeHtml(displayMessage)}</p>
                 <small style="color: #bbb; display: block; margin-top: 8px;">Schedules will appear here once configured</small>
             </td>
         </tr>
@@ -300,19 +258,25 @@ function getShiftClass(shiftName) {
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
 function openScheduleModal(employeeId, dayIndex, week, employeeName) {
-    console.log('Opening schedule modal:', { employeeId, dayIndex, week, employeeName });
+    console.log('📝 Opening schedule modal:', { employeeId, dayIndex, week, employeeName });
+    
+    // Store current editing info
+    currentEditingEmployee = employeeId;
+    currentEditingDay = dayIndex;
+    currentEditingWeek = week;
     
     const modal = document.getElementById('scheduleModal');
     const form = document.getElementById('scheduleForm');
     
     if (!modal || !form) {
-        console.error('Modal elements not found!');
+        console.error('❌ Modal elements not found!');
         return;
     }
     
@@ -329,27 +293,35 @@ function openScheduleModal(employeeId, dayIndex, week, employeeName) {
     // Get current shift for this day
     const scheduleData = week === 'next' ? nextWeekSchedule : currentWeekSchedule;
     const currentShift = scheduleData.find(s => 
-        s.employee_id === employeeId && s.day_of_week == dayIndex
+        s.employee_id === employeeId && parseInt(s.day_of_week) === parseInt(dayIndex)
     );
     
     const shiftSelect = document.getElementById('shiftSelect');
     if (currentShift) {
         shiftSelect.value = currentShift.shift_name || 'Morning';
+        console.log('📌 Current shift:', currentShift.shift_name);
     } else {
         shiftSelect.value = 'Morning';
+        console.log('📌 No existing shift, defaulting to Morning');
     }
     
     modal.style.display = 'block';
     
-    // Form submit
+    // Form submit - FIXED VERSION
     form.onsubmit = async (e) => {
         e.preventDefault();
-        await saveSchedule(employeeId, dayIndex, week);
+        await saveSchedule();
     };
 }
 
-async function saveSchedule(employeeId, dayIndex, week) {
-    console.log('Saving schedule:', { employeeId, dayIndex, week });
+async function saveSchedule() {
+    console.log('💾 Saving schedule...');
+    
+    if (!currentEditingEmployee || currentEditingDay === null || !currentEditingWeek) {
+        console.error('❌ Missing editing context!');
+        showNotification('Error: Missing schedule information', 'error');
+        return;
+    }
     
     const shiftName = document.getElementById('shiftSelect').value;
     
@@ -363,20 +335,27 @@ async function saveSchedule(employeeId, dayIndex, week) {
     
     const today = new Date();
     const saturday = getLastSaturday(today);
-    if (week === 'next') {
-        saturday.setDate(saturday.getDate() + 7);
+    if (currentEditingWeek === 'next') {
+    saturday.setDate(saturday.getDate() + 7); // CORRECT - single setDate
     }
     
     const data = {
-        employee_id: employeeId,
+        employee_id: currentEditingEmployee,
         week_start: saturday.toISOString().split('T')[0],
-        day: parseInt(dayIndex),
+        day: parseInt(currentEditingDay),
         shift_name: shiftName,
         shift_time: shiftTimes[shiftName],
-        is_next_week: week === 'next' ? 1 : 0
+        is_next_week: currentEditingWeek === 'next' ? 1 : 0
     };
     
-    console.log('Sending to API:', data);
+    console.log('📤 Sending to API:', data);
+    
+    // Disable submit button to prevent double-clicks
+    const submitBtn = document.querySelector('#scheduleForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
     
     try {
         const response = await fetch(`${SCHEDULE_API}?action=update`, {
@@ -385,28 +364,37 @@ async function saveSchedule(employeeId, dayIndex, week) {
             body: JSON.stringify(data)
         });
         
-        const text = await response.text();
-        console.log('Save response (raw):', text);
-        
-        const result = JSON.parse(text);
-        console.log('Save response (parsed):', result);
+        const result = await response.json();
+        console.log('📥 API response:', result);
         
         if (result.success) {
-            showNotification('Schedule updated successfully!', 'success');
+            showNotification('✅ Schedule updated successfully!', 'success');
             closeModal();
             
-            // Reload appropriate schedule
-            if (week === 'next') {
-                await loadNextSchedule();
-            } else {
-                await loadCurrentSchedule();
-            }
+            // Force reload both schedules to ensure fresh data
+            console.log('🔄 Reloading schedules...');
+            await Promise.all([
+                loadCurrentSchedule(),
+                loadNextSchedule()
+            ]);
+            
+            console.log('✅ Schedules reloaded!');
         } else {
-            showNotification(result.message || 'Failed to update schedule', 'error');
+            showNotification('❌ ' + (result.message || 'Failed to update schedule'), 'error');
+            // Re-enable button on error
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Save';
+            }
         }
     } catch (error) {
-        console.error('Error saving schedule:', error);
-        showNotification('Failed to update schedule: ' + error.message, 'error');
+        console.error('❌ Error saving schedule:', error);
+        showNotification('❌ Failed to update schedule: ' + error.message, 'error');
+        // Re-enable button on error
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Save';
+        }
     }
 }
 
@@ -425,11 +413,16 @@ function closeModal() {
     if (employeeSelect) {
         employeeSelect.disabled = false;
     }
+    
+    // Clear editing context
+    currentEditingEmployee = null;
+    currentEditingDay = null;
+    currentEditingWeek = null;
 }
 
 async function copyScheduleToNext() {
     if (currentWeekSchedule.length === 0) {
-        showNotification('No current week schedule to copy. Please create one first.', 'error');
+        showNotification('❌ No current week schedule to copy', 'error');
         return;
     }
     
@@ -437,28 +430,25 @@ async function copyScheduleToNext() {
         return;
     }
     
-    console.log('Copying schedule to next week...');
-    showNotification('Copying schedule...', 'success');
+    console.log('📋 Copying schedule to next week...');
+    showNotification('📋 Copying schedule...', 'info');
     
     try {
         const response = await fetch(`${SCHEDULE_API}?action=copy`, {
             method: 'POST'
         });
         
-        const text = await response.text();
-        console.log('Copy response:', text);
-        
-        const result = JSON.parse(text);
+        const result = await response.json();
         
         if (result.success) {
-            showNotification('Schedule copied to next week successfully!', 'success');
+            showNotification('✅ Schedule copied successfully!', 'success');
             await loadNextSchedule();
         } else {
-            showNotification(result.message || 'Failed to copy schedule', 'error');
+            showNotification('❌ ' + (result.message || 'Failed to copy schedule'), 'error');
         }
-    } catch (err) {
-        console.error('Error copying schedule:', err);
-        showNotification('Failed to copy schedule: ' + err.message, 'error');
+    } catch (error) {
+        console.error('❌ Error copying schedule:', error);
+        showNotification('❌ Failed to copy schedule: ' + error.message, 'error');
     }
 }
 
@@ -467,33 +457,30 @@ async function clearNextWeek() {
         return;
     }
     
-    console.log('Clearing next week schedule...');
-    showNotification('Clearing schedule...', 'success');
+    console.log('🗑️ Clearing next week schedule...');
+    showNotification('🗑️ Clearing schedule...', 'info');
     
     try {
         const response = await fetch(`${SCHEDULE_API}?action=clear`, {
             method: 'POST'
         });
         
-        const text = await response.text();
-        console.log('Clear response:', text);
-        
-        const result = JSON.parse(text);
+        const result = await response.json();
         
         if (result.success) {
-            showNotification('Next week schedule cleared successfully!', 'success');
+            showNotification('✅ Next week schedule cleared!', 'success');
             await loadNextSchedule();
         } else {
-            showNotification(result.message || 'Failed to clear schedule', 'error');
+            showNotification('❌ ' + (result.message || 'Failed to clear schedule'), 'error');
         }
-    } catch (err) {
-        console.error('Error clearing schedule:', err);
-        showNotification('Failed to clear schedule: ' + err.message, 'error');
+    } catch (error) {
+        console.error('❌ Error clearing schedule:', error);
+        showNotification('❌ Failed to clear schedule: ' + error.message, 'error');
     }
 }
 
 function showNotification(message, type = 'success') {
-    console.log(`Notification: [${type}] ${message}`);
+    console.log(`📢 Notification: [${type}] ${message}`);
     
     const notification = document.getElementById('globalNotification');
     if (notification) {
@@ -506,14 +493,6 @@ function showNotification(message, type = 'success') {
         }, 3000);
     }
 }
-
-// Close modal when clicking outside
-window.onclick = (event) => {
-    const modal = document.getElementById('scheduleModal');
-    if (event.target === modal) {
-        closeModal();
-    }
-};
 
 // Make functions globally accessible
 window.openScheduleModal = openScheduleModal;
