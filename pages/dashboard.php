@@ -30,7 +30,6 @@ $user = getCurrentUser();
                 <a href="attendance.php" class="nav-item"><i class="fas fa-clock"></i><span>Attendance</span></a>
                 <a href="biometric.php" class="nav-item"><i class="fas fa-fingerprint"></i><span>Biometric</span></a>
                 <a href="payroll.php" class="nav-item"><i class="fas fa-money-bill-wave"></i><span>Payroll</span></a>
-                <a href="report.php" class="nav-item"><i class="fas fa-file-alt"></i><span>Report</span></a>
                 <a href="settings.php" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
             </div>
         </div>
