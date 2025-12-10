@@ -1,4 +1,4 @@
-// js/employees-schedule.js - Enhanced Employee Management with Schedule
+// js/employees.js - Updated with Archive System
 
 const API_URL = '../api/employees.php';
 const SCHEDULE_API = '../api/schedules.php';
@@ -153,8 +153,8 @@ function renderEmployees() {
                             <i class="fas fa-ban"></i>
                         </button>`
                     }
-                    <button class="icon-btn" onclick="deleteEmployee('${emp.employee_id}')" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="icon-btn archive" onclick="archiveEmployee('${emp.employee_id}')" title="Archive" style="color: #ff9800;">
+                        <i class="fas fa-archive"></i>
                     </button>
                 </div>
             </div>
@@ -201,11 +201,9 @@ function closeScheduleModal() {
 
 async function loadEmployeeSchedule(employeeId) {
     try {
-        // Load current week schedule
         const currentResponse = await fetch(`${SCHEDULE_API}?action=current`);
         const currentResult = await currentResponse.json();
         
-        // Load next week schedule
         const nextResponse = await fetch(`${SCHEDULE_API}?action=next`);
         const nextResult = await nextResponse.json();
         
@@ -221,11 +219,9 @@ async function loadEmployeeSchedule(employeeId) {
 function renderEmployeeSchedule(employeeId, currentData, nextData) {
     const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     
-    // Filter schedules for this employee
     const currentSchedule = currentData.filter(s => s.employee_id === employeeId);
     const nextSchedule = nextData.filter(s => s.employee_id === employeeId);
     
-    // Create arrays indexed by day_of_week
     const currentDays = Array(7).fill(null);
     const nextDays = Array(7).fill(null);
     
@@ -237,7 +233,6 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
         nextDays[s.day_of_week] = s;
     });
     
-    // Render current week
     const currentBody = document.getElementById('currentWeekScheduleBody');
     currentBody.innerHTML = days.map((day, index) => {
         const shift = currentDays[index];
@@ -255,7 +250,6 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
         `;
     }).join('');
     
-    // Render next week
     const nextBody = document.getElementById('nextWeekScheduleBody');
     nextBody.innerHTML = days.map((day, index) => {
         const shift = nextDays[index];
@@ -298,7 +292,6 @@ async function saveSchedule(e) {
     const employeeId = document.getElementById('editDayEmployee').value;
     const shiftName = document.getElementById('editShiftSelect').value;
     
-    // Define shift times
     const shiftTimes = {
         'Morning': '6:00 AM - 2:00 PM',
         'Afternoon': '2:00 PM - 10:00 PM',
@@ -321,8 +314,6 @@ async function saveSchedule(e) {
         is_next_week: week === 'next' ? 1 : 0
     };
     
-    console.log('Saving schedule with data:', data); // Debug log
-    
     try {
         const response = await fetch(`${SCHEDULE_API}?action=update`, {
             method: 'POST',
@@ -332,10 +323,8 @@ async function saveSchedule(e) {
         
         const result = await response.json();
         
-        console.log('Schedule save result:', result); // Debug log
-        
         if (result.success) {
-            showNotification('Schedule updated successfully! Check the dashboard to see changes.', 'success');
+            showNotification('Schedule updated successfully!', 'success');
             closeScheduleEditModal();
             await loadEmployeeSchedule(employeeId);
         } else {
@@ -349,18 +338,15 @@ async function saveSchedule(e) {
 
 function getLastSaturday(date) {
     const d = new Date(date);
-    const day = d.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const day = d.getDay();
     
-    // Calculate days to subtract to get to last Saturday
-    // If today is Saturday (6), use today
-    // Otherwise, go back to last Saturday
     let daysToSubtract;
     if (day === 6) {
-        daysToSubtract = 0; // Already Saturday
+        daysToSubtract = 0;
     } else if (day === 0) {
-        daysToSubtract = 1; // Sunday, go back 1 day
+        daysToSubtract = 1;
     } else {
-        daysToSubtract = day + 1; // Monday(1)→2 days back, Tuesday(2)→3 days back, etc.
+        daysToSubtract = day + 1;
     }
     
     d.setDate(d.getDate() - daysToSubtract);
@@ -479,27 +465,7 @@ function viewEmployee(id) {
     console.log('View employee:', id);
 }
 
-async function deleteEmployee(id) {
-    if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}?action=delete&id=${id}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(result.message, 'success');
-            await loadEmployees();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting employee:', error);
-        showNotification('Failed to delete employee', 'error');
-    }
-}
+// DELETE FUNCTION REMOVED - NOW USING archiveEmployee() from archive-system.js
 
 async function toggleBlocklist(id, blocklist) {
     const reason = blocklist ? prompt('Enter blocklist reason:') : null;
@@ -559,6 +525,8 @@ function showNotification(message, type = 'success') {
         border-radius: 5px;
         z-index: 10000;
         animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        color: white;
     `;
     
     document.body.appendChild(notification);
@@ -568,7 +536,6 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Close modals when clicking outside
 window.onclick = (event) => {
     const employeeModal = document.getElementById('employeeModal');
     const scheduleModal = document.getElementById('scheduleModal');
@@ -585,12 +552,10 @@ window.onclick = (event) => {
     }
 };
 
-// Make functions global
 window.openScheduleModal = openScheduleModal;
 window.editScheduleDay = editScheduleDay;
 window.openEditModal = openEditModal;
 window.toggleBlocklist = toggleBlocklist;
-window.deleteEmployee = deleteEmployee;
 window.viewEmployee = viewEmployee;
 window.closeScheduleEditModal = closeScheduleEditModal;
 window.saveSchedule = saveSchedule;

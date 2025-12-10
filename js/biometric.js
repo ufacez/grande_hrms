@@ -1,4 +1,4 @@
-// js/biometric.js - Dynamic Biometric Management
+// js/biometric.js - Updated with Archive System
 
 const API_URL = '../api/biometric.php';
 let biometricData = [];
@@ -27,11 +27,6 @@ function setupEventListeners() {
     // Register form
     document.getElementById('registerForm')?.addEventListener('submit', handleRegister);
     
-    // Delete modal
-    document.querySelector('#deleteConfirmModal .close-modal')?.addEventListener('click', closeDeleteModal);
-    document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal);
-    document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDelete);
-    
     // Search
     document.getElementById('searchInput')?.addEventListener('input', renderTable);
     
@@ -54,6 +49,7 @@ async function loadBiometricData() {
         
         if (result.success) {
             biometricData = result.data;
+            window.biometricData = result.data; // Make available globally for archive system
             renderTable();
         } else {
             showNotification('error', 'Error', result.message);
@@ -120,8 +116,8 @@ function renderTable() {
                         <button class="btn btn-renew" onclick="renewBiometric('${bio.employee_id}')">
                             <i class="fas fa-sync-alt"></i> Renew
                         </button>
-                        <button class="btn btn-delete" onclick="deleteBiometric(${bio.biometric_id})">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn" onclick="archiveBiometric(${bio.biometric_id})" style="background-color: #ff9800; color: white;">
+                            <i class="fas fa-archive"></i>
                         </button>
                     </div>
                 </td>
@@ -231,39 +227,7 @@ async function renewBiometric(employeeId) {
     }
 }
 
-function deleteBiometric(id) {
-    deleteItemId = id;
-    document.getElementById('deleteConfirmModal').style.display = 'block';
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteConfirmModal').style.display = 'none';
-    deleteItemId = null;
-}
-
-async function confirmDelete() {
-    if (!deleteItemId) return;
-    
-    try {
-        const response = await fetch(`${API_URL}?action=delete&id=${deleteItemId}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('success', 'Success', result.message);
-            closeDeleteModal();
-            loadBiometricData();
-            loadStats();
-        } else {
-            showNotification('error', 'Error', result.message);
-        }
-    } catch (error) {
-        console.error('Error deleting biometric:', error);
-        showNotification('error', 'Error', 'Failed to delete biometric');
-    }
-}
+// DELETE FUNCTION REMOVED - NOW USING archiveBiometric() from archive-system.js
 
 function showNotification(type, title, message) {
     const notification = document.getElementById('notification');
@@ -279,12 +243,14 @@ function showNotification(type, title, message) {
 // Close modals on outside click
 window.onclick = (event) => {
     const registerModal = document.getElementById('registerModal');
-    const deleteModal = document.getElementById('deleteConfirmModal');
     
     if (event.target === registerModal) {
         closeRegisterModal();
     }
-    if (event.target === deleteModal) {
-        closeDeleteModal();
-    }
 };
+
+// Make functions global
+window.renewBiometric = renewBiometric;
+window.biometricData = biometricData;
+
+console.log('✅ Biometric system loaded with archive functionality');

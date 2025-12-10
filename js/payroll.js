@@ -1,26 +1,22 @@
-// js/payroll.js - Enhanced Payroll System with Auto-Calculation
+// js/payroll.js - Updated with Archive System
 
 const PAYROLL_API = '../api/payroll.php';
 let payrollData = [];
 let currentPeriod = null;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializePayPeriods();
     setupEventListeners();
 });
 
 function setupEventListeners() {
-    // Sidebar toggle
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('sidebar').classList.toggle('collapsed');
         document.getElementById('mainContent').classList.toggle('expanded');
     });
     
-    // Apply filters
     document.getElementById('applyFilters')?.addEventListener('click', loadPayroll);
     
-    // Period change
     document.getElementById('payPeriod')?.addEventListener('change', (e) => {
         if (e.target.value) {
             const [start, end] = e.target.value.split('|');
@@ -29,21 +25,16 @@ function setupEventListeners() {
         }
     });
     
-    // Department filter
     document.getElementById('departmentFilter')?.addEventListener('change', loadPayroll);
     
-    // Search
     document.getElementById('searchInput')?.addEventListener('input', renderPayrollTable);
     
-    // Edit modal
     document.getElementById('closeEditModalBtn')?.addEventListener('click', closeEditModal);
     document.getElementById('cancelEditBtn')?.addEventListener('click', closeEditModal);
     document.getElementById('editForm')?.addEventListener('submit', handleEditSubmit);
     
-    // Payslip modal
     document.getElementById('closePayslipModalBtn')?.addEventListener('click', closePayslipModal);
     
-    // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         document.getElementById('logoutConfirmModal').style.display = 'block';
     });
@@ -63,7 +54,6 @@ async function initializePayPeriods() {
         const select = document.getElementById('payPeriod');
         
         if (result.success && result.data.length > 0) {
-            // Populate existing periods
             select.innerHTML = '<option value="">Select Pay Period</option>' +
                 result.data.map(p => 
                     `<option value="${p.pay_period_start}|${p.pay_period_end}">
@@ -71,7 +61,6 @@ async function initializePayPeriods() {
                     </option>`
                 ).join('');
             
-            // Auto-select first period
             if (result.data.length > 0) {
                 const first = result.data[0];
                 select.value = `${first.pay_period_start}|${first.pay_period_end}`;
@@ -81,11 +70,9 @@ async function initializePayPeriods() {
                 };
             }
         } else {
-            // No periods exist - create default options
             select.innerHTML = generateDefaultPeriods();
         }
         
-        // Add "Generate New Period" option
         const optgroup = document.createElement('optgroup');
         optgroup.label = '── Generate New Period ──';
         select.appendChild(optgroup);
@@ -114,17 +101,14 @@ function generateDefaultPeriods() {
     
     let options = '<option value="">Select Pay Period</option>';
     
-    // Generate periods for current and previous month
     for (let monthOffset = 0; monthOffset <= 1; monthOffset++) {
         const month = currentMonth - monthOffset;
         const year = month < 0 ? currentYear - 1 : currentYear;
         const adjustedMonth = month < 0 ? month + 12 : month;
         
-        // First period (1st to 15th)
         const period1Start = `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-01`;
         const period1End = `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-15`;
         
-        // Second period (16th to end of month)
         const lastDay = new Date(year, adjustedMonth + 1, 0).getDate();
         const period2Start = `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-16`;
         const period2End = `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-${lastDay}`;
@@ -143,20 +127,17 @@ function generateNextPeriods() {
     
     const periods = [];
     
-    // Generate next 2 periods
     for (let i = 0; i < 2; i++) {
         const month = currentMonth + Math.floor(i / 2);
         const year = month > 11 ? currentYear + 1 : currentYear;
         const adjustedMonth = month > 11 ? month - 12 : month;
         
         if (i % 2 === 0) {
-            // First period (1st to 15th)
             periods.push({
                 start: `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-01`,
                 end: `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-15`
             });
         } else {
-            // Second period (16th to end of month)
             const lastDay = new Date(year, adjustedMonth + 1, 0).getDate();
             periods.push({
                 start: `${year}-${String(adjustedMonth + 1).padStart(2, '0')}-16`,
@@ -189,9 +170,10 @@ async function loadPayroll() {
         
         if (result.success) {
             payrollData = result.data || [];
+            window.payrollData = result.data || []; // Make globally available for archive system
+            console.log('Loaded payroll data:', payrollData.length, 'records');
             
             if (payrollData.length === 0) {
-                // No payroll data - offer to generate
                 showGeneratePrompt();
             } else {
                 renderPayrollTable();
@@ -223,7 +205,6 @@ function showGeneratePrompt() {
         </tr>
     `;
     
-    // Clear stats
     document.getElementById('totalPayroll').textContent = '₱0.00';
     document.getElementById('totalOvertime').textContent = '₱0.00';
     document.getElementById('totalDeductions').textContent = '₱0.00';
@@ -311,8 +292,8 @@ function renderPayrollTable() {
                     <button class="btn-icon btn-payslip" onclick="viewPayslip(${p.payroll_id})" title="View Payslip">
                         <i class="fas fa-file-invoice"></i>
                     </button>
-                    <button class="btn-icon btn-delete" onclick="deletePayroll(${p.payroll_id})" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="btn-icon" onclick="archivePayroll(${p.payroll_id})" title="Archive" style="background-color: #ff9800;">
+                        <i class="fas fa-archive"></i>
                     </button>
                 </div>
             </td>
@@ -468,27 +449,7 @@ function printPayslip() {
     window.print();
 }
 
-async function deletePayroll(id) {
-    if (!confirm('Are you sure you want to delete this payroll record?')) return;
-    
-    try {
-        const response = await fetch(`${PAYROLL_API}?action=delete&id=${id}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('success', 'Success', result.message);
-            await loadPayroll();
-        } else {
-            showNotification('error', 'Error', result.message);
-        }
-    } catch (error) {
-        console.error('Error deleting payroll:', error);
-        showNotification('error', 'Error', 'Failed to delete payroll');
-    }
-}
+// DELETE FUNCTION REMOVED - NOW USING archivePayroll() from archive-system.js
 
 function formatNumber(num) {
     return parseFloat(num || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -529,11 +490,10 @@ function createNotificationContainer() {
     return container;
 }
 
-// Make functions globally accessible
 window.generatePayroll = generatePayroll;
 window.editPayroll = editPayroll;
 window.viewPayslip = viewPayslip;
-window.deletePayroll = deletePayroll;
 window.printPayslip = printPayslip;
+window.payrollData = payrollData;
 
-console.log('✅ Payroll system loaded with auto-calculation');
+console.log('✅ Payroll system loaded with archive functionality');

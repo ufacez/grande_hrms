@@ -240,5 +240,6 @@ $user = getCurrentUser();
             });
         });
     </script>
+    <script src="../js/archive-system.js" defer></script>
 </body>
 </html>

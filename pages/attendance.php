@@ -489,6 +489,7 @@ $user = getCurrentUser();
 
     <script src="../js/attendance.js"></script>
     <script src="../js/attendance-manual.js"></script>
+    <script src="../js/archive-system.js" defer></script>
     <script>
         // Update API calls to use PHP backend
         const API_URL = '../api/attendance.php';

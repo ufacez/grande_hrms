@@ -234,6 +234,7 @@ $user = getCurrentUser();
     </div>
 
     <script src="../js/employees.js"></script>
+    <script src="../js/archive-system.js" defer></script>
     <script>
         // Update logout to use PHP
         document.getElementById('confirmLogoutBtn').addEventListener('click', () => {

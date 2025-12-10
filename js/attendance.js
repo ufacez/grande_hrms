@@ -1,4 +1,4 @@
-// js/attendance.js - Dynamic Attendance Management
+// js/attendance.js - Updated with Archive System
 
 const API_URL = '../api/attendance.php';
 let attendanceData = [];
@@ -8,7 +8,6 @@ let currentFilter = {
     viewBy: 'day'
 };
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeFilters();
     loadAttendance();
@@ -30,13 +29,11 @@ function initializeFilters() {
 }
 
 function setupEventListeners() {
-    // Sidebar toggle
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
         document.getElementById('sidebar').classList.toggle('collapsed');
         document.querySelector('.main-content').classList.toggle('expanded');
     });
     
-    // View type toggle
     document.getElementById('viewBySelect')?.addEventListener('change', (e) => {
         currentFilter.viewBy = e.target.value;
         document.getElementById('dateFilterDay').style.display = e.target.value === 'day' ? 'block' : 'none';
@@ -44,7 +41,6 @@ function setupEventListeners() {
         loadAttendance();
     });
     
-    // Date filters
     document.getElementById('dateFilterSingle')?.addEventListener('change', (e) => {
         currentFilter.date = e.target.value;
         loadAttendance();
@@ -56,21 +52,17 @@ function setupEventListeners() {
         loadAttendance();
     });
     
-    // Status filter
     document.getElementById('statusFilter')?.addEventListener('change', (e) => {
         currentFilter.status = e.target.value;
         loadAttendance();
     });
     
-    // Search
     document.getElementById('searchInput')?.addEventListener('input', renderAttendance);
     
-    // Edit modal
     document.getElementById('closeEditModal')?.addEventListener('click', closeEditModal);
     document.getElementById('cancelEditBtn')?.addEventListener('click', closeEditModal);
     document.getElementById('editAttendanceForm')?.addEventListener('submit', handleEditSubmit);
     
-    // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
         document.getElementById('logoutConfirmModal').style.display = 'block';
     });
@@ -103,23 +95,6 @@ async function loadAttendance() {
     } catch (error) {
         console.error('Error loading attendance:', error);
         showNotification('Failed to load attendance records', 'error');
-    }
-}
-
-async function loadStats() {
-    try {
-        const response = await fetch(`${API_URL}?action=stats`);
-        const result = await response.json();
-        
-        if (result.success) {
-            const stats = result.data;
-            document.getElementById('presentCount').textContent = stats.present || 0;
-            document.getElementById('absentCount').textContent = stats.absent || 0;
-            document.getElementById('lateCount').textContent = stats.late || 0;
-            document.getElementById('leaveCount').textContent = stats.on_leave || 0;
-        }
-    } catch (error) {
-        console.error('Error loading stats:', error);
     }
 }
 
@@ -183,8 +158,8 @@ function renderAttendance() {
                     <button class="icon-btn" onclick="editAttendance(${record.attendance_id})" title="Edit">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="icon-btn delete" onclick="deleteAttendance(${record.attendance_id})" title="Delete">
-                        <i class="fas fa-trash"></i>
+                    <button class="icon-btn archive" onclick="archiveAttendance(${record.attendance_id})" title="Archive" style="color: #ff9800;">
+                        <i class="fas fa-archive"></i>
                     </button>
                 </div>
             </td>
@@ -260,27 +235,7 @@ async function handleEditSubmit(e) {
     }
 }
 
-async function deleteAttendance(id) {
-    if (!confirm('Are you sure you want to delete this attendance record?')) return;
-    
-    try {
-        const response = await fetch(`${API_URL}?action=delete&id=${id}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('Attendance deleted successfully', 'success');
-            loadAttendance();
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting attendance:', error);
-        showNotification('Failed to delete attendance', 'error');
-    }
-}
+// DELETE FUNCTION REMOVED - NOW USING archiveAttendance() from archive-system.js
 
 function showNotification(message, type = 'success') {
     const notification = document.getElementById('editNotification');
@@ -295,10 +250,13 @@ function showNotification(message, type = 'success') {
     }
 }
 
-// Close modals on outside click
 window.onclick = (event) => {
     const editModal = document.getElementById('editAttendanceModal');
     if (event.target === editModal) {
         closeEditModal();
     }
 };
+
+// Make functions globally accessible
+window.editAttendance = editAttendance;
+window.attendanceData = attendanceData;

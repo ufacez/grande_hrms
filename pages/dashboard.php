@@ -180,5 +180,6 @@ $user = getCurrentUser();
     </button>
 
     <script src="../js/dashboard.js"></script>
+    <script src="../js/archive-system.js" defer></script>
 </body>
 </html>
