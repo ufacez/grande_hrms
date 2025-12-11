@@ -314,8 +314,8 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
                 }
             }
             
-            // Calculate hours worked
-            $hoursWorked = floatval($record['hours_worked']);
+            // Calculate hours worked properly for overnight shifts
+            $hoursWorked = calculateHoursWorkedFixed($record['time_in'], $record['time_out'], $record['attendance_date']);
             
             if ($hoursWorked > 0) {
                 // Check for night differential (10PM - 6AM)
@@ -323,6 +323,8 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
                     $date . ' ' . $record['time_in'], 
                     $date . ' ' . $record['time_out']
                 );
+                
+                $nightDiffHours += $nightHours;
                 
                 if ($isHoliday) {
                     // Holiday work - paid at holiday rate
@@ -345,50 +347,58 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
         }
     }
     
-    // Calculate earnings
-    $basicSalary = $regularHours * $hourlyRate;
-    $nightDiffPay = $nightDiffHours * $hourlyRate * NIGHT_DIFF_RATE; // 10% additional
-    $holidayPay = $holidayHours * $hourlyRate * HOLIDAY_RATE; // 200% for holidays
+    // Calculate pay components
+    $regularPay = $regularHours * $hourlyRate;
+    $nightDiffPay = $nightDiffHours * $hourlyRate * NIGHT_DIFF_RATE;
+    $holidayPay = $holidayHours * $hourlyRate * HOLIDAY_RATE;
+    $basicSalary = $regularPay + $nightDiffPay + $holidayPay;
     
-    // OT pay (pending approval, set to 0 initially)
-    $overtimeRate = $hourlyRate * OVERTIME_MULTIPLIER; // 125% rate
-    $overtimePay = 0; // Owner must approve and edit
-    
-    // Gross pay
-    $grossPay = $basicSalary + $nightDiffPay + $holidayPay + $overtimePay;
+    // Overtime (pending approval - set to 0 initially)
+    $overtimeRate = $hourlyRate * OVERTIME_MULTIPLIER;
+    $overtimePay = 0; // Owner must approve
     
     // Calculate deductions
-    $lateDeductions = ($lateMinutes / 60) * $hourlyRate;
+    $lateDeduction = ($lateMinutes / 60) * $hourlyRate;
     
-    // Government deductions
+    // Government deductions (SSS, PhilHealth, Pag-IBIG)
+    $grossPay = $basicSalary + $overtimePay;
     $sss = calculateSSS($grossPay);
     $philHealth = calculatePhilHealth($grossPay);
-    $pagIbig = 100; // Standard HDMF
+    $pagIbig = 100; // Standard Pag-IBIG contribution
     
     $otherDeductions = $sss + $philHealth + $pagIbig;
-    $totalDeductions = $lateDeductions + $otherDeductions;
-    
-    // Net pay
+    $totalDeductions = $lateDeduction + $otherDeductions;
     $netPay = $grossPay - $totalDeductions;
     
     return [
         'error' => false,
-        'present_days' => $presentDays,
-        'regular_hours' => $regularHours,
-        'night_diff_hours' => $nightDiffHours,
-        'holiday_hours' => $holidayHours,
-        'overtime_hours' => round($overtimeHours, 2), // Pending approval
-        'basic_salary' => round($basicSalary + $nightDiffPay + $holidayPay, 2),
+        'basic_salary' => round($basicSalary, 2),
+        'overtime_hours' => round($overtimeHours, 2),
         'overtime_rate' => round($overtimeRate, 2),
-        'overtime_pay' => round($overtimePay, 2), // 0 until approved
+        'overtime_pay' => round($overtimePay, 2),
         'gross_pay' => round($grossPay, 2),
-        'late_deductions' => round($lateDeductions, 2),
+        'late_deductions' => round($lateDeduction, 2),
         'other_deductions' => round($otherDeductions, 2),
         'total_deductions' => round($totalDeductions, 2),
-        'net_pay' => round($netPay, 2),
-        'daily_rate' => $dailyRate,
-        'note' => $overtimeHours > 0 ? "OT: {$overtimeHours} hrs pending owner approval" : null
+        'net_pay' => round($netPay, 2)
     ];
+}
+
+function calculateHoursWorkedFixed($timeIn, $timeOut, $date) {
+    if (!$timeIn || !$timeOut) return 0;
+    
+    $start = new DateTime($date . ' ' . $timeIn);
+    $end = new DateTime($date . ' ' . $timeOut);
+    
+    // Handle overnight shift
+    if ($end < $start) {
+        $end->modify('+1 day');
+    }
+    
+    $interval = $start->diff($end);
+    $hours = $interval->h + ($interval->i / 60);
+    
+    return max(0, round($hours * 2) / 2); // Round to nearest 0.5
 }
 
 function calculateNightDifferentialFixed($timeIn, $timeOut) {
@@ -396,6 +406,11 @@ function calculateNightDifferentialFixed($timeIn, $timeOut) {
     
     $start = new DateTime($timeIn);
     $end = new DateTime($timeOut);
+    
+    // Handle overnight shift
+    if ($end < $start) {
+        $end->modify('+1 day');
+    }
     
     // Night shift hours: 22:00 (10 PM) to 06:00 (6 AM)
     $NIGHT_START = 22;
@@ -406,8 +421,8 @@ function calculateNightDifferentialFixed($timeIn, $timeOut) {
     
     $nightHours = 0;
     
-    // Handle overnight shift
-    if ($endHour < $startHour) {
+    // If shift crosses midnight
+    if ($end->format('Y-m-d') !== $start->format('Y-m-d')) {
         // Part 1: From start to midnight
         if ($startHour >= $NIGHT_START) {
             $nightHours += (24 - $startHour);
@@ -416,8 +431,9 @@ function calculateNightDifferentialFixed($timeIn, $timeOut) {
         }
         
         // Part 2: From midnight to end
-        if ($endHour <= $NIGHT_END) {
-            $nightHours += $endHour;
+        $endHourNextDay = (int)$end->format('H') + ((int)$end->format('i') / 60);
+        if ($endHourNextDay <= $NIGHT_END) {
+            $nightHours += $endHourNextDay;
         }
     } else {
         // Same day shift
