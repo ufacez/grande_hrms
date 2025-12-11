@@ -319,8 +319,10 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
             
             if ($hoursWorked > 0) {
                 // Check for night differential (10PM - 6AM)
-                $nightHours = calculateNightDifferential($record['time_in'], $record['time_out']);
-                $nightDiffHours += $nightHours;
+                $nightHours = calculateNightDifferentialFixed(
+                    $date . ' ' . $record['time_in'], 
+                    $date . ' ' . $record['time_out']
+                );
                 
                 if ($isHoliday) {
                     // Holiday work - paid at holiday rate
@@ -389,32 +391,46 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
     ];
 }
 
-function calculateNightDifferential($timeIn, $timeOut) {
+function calculateNightDifferentialFixed($timeIn, $timeOut) {
     if (!$timeIn || !$timeOut) return 0;
     
     $start = new DateTime($timeIn);
     $end = new DateTime($timeOut);
     
-    $nightStart = clone $start;
-    $nightStart->setTime(NIGHT_START, 0); // 10 PM
+    // Night shift hours: 22:00 (10 PM) to 06:00 (6 AM)
+    $NIGHT_START = 22;
+    $NIGHT_END = 6;
     
-    $nightEnd = clone $start;
-    if ($end->format('H') < NIGHT_START) {
-        // Shift crossed midnight
-        $nightEnd->modify('+1 day');
+    $startHour = (int)$start->format('H') + ((int)$start->format('i') / 60);
+    $endHour = (int)$end->format('H') + ((int)$end->format('i') / 60);
+    
+    $nightHours = 0;
+    
+    // Handle overnight shift
+    if ($endHour < $startHour) {
+        // Part 1: From start to midnight
+        if ($startHour >= $NIGHT_START) {
+            $nightHours += (24 - $startHour);
+        } elseif ($startHour < $NIGHT_END) {
+            $nightHours += ($NIGHT_END - $startHour);
+        }
+        
+        // Part 2: From midnight to end
+        if ($endHour <= $NIGHT_END) {
+            $nightHours += $endHour;
+        }
+    } else {
+        // Same day shift
+        if ($startHour >= $NIGHT_START && $endHour <= 24) {
+            $nightHours = $endHour - $startHour;
+        } elseif ($endHour <= $NIGHT_END && $startHour < $NIGHT_END) {
+            $nightHours = $endHour - max($startHour, 0);
+        } elseif ($startHour < $NIGHT_END && $endHour > $NIGHT_END) {
+            $nightHours = $NIGHT_END - $startHour;
+        }
     }
-    $nightEnd->setTime(NIGHT_END, 0); // 6 AM
     
-    // Calculate overlap with night hours
-    $workStart = max($start, $nightStart);
-    $workEnd = min($end, $nightEnd);
-    
-    if ($workStart < $workEnd) {
-        $interval = $workStart->diff($workEnd);
-        return $interval->h + ($interval->i / 60);
-    }
-    
-    return 0;
+    return max(0, round($nightHours * 2) / 2);
 }
 
 function getPhilippineHolidays($startDate, $endDate) {

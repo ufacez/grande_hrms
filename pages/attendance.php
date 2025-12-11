@@ -488,7 +488,7 @@ $user = getCurrentUser();
     </div>
 
     <script src="../js/attendance.js"></script>
-    <script src="../js/attendance-manual.js"></script>
+    <script src="../js/attendance-manual-overnight.js"></script>
     <script src="../js/archive-system.js" defer></script>
     <script>
         // Update API calls to use PHP backend

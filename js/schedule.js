@@ -68,15 +68,22 @@ class ScheduleSalaryManager {
         if (endPeriod.toUpperCase() === 'PM' && end !== 12) end += 12;
         if (endPeriod.toUpperCase() === 'AM' && end === 12) end = 0;
         
-        // Calculate hours
-        let hours = end - start;
-        if (hours < 0) hours += 24; // Handle overnight shifts
+        // Add minutes as decimal
+        const startDecimal = start + (parseInt(startMin) / 60);
+        const endDecimal = end + (parseInt(endMin) / 60);
         
-        // Add minutes
-        hours += (parseInt(endMin) - parseInt(startMin)) / 60;
-        
-        return Math.round(hours * 2) / 2; // Round to nearest 0.5
+        // ✅ FIX: Handle overnight shifts properly
+        let hours;
+        if (endDecimal < startDecimal) {
+            // Overnight shift: (24 - start) + end
+            hours = (24 - startDecimal) + endDecimal;
+        } else {
+            // Same day shift
+            hours = endDecimal - startDecimal;
     }
+    
+    return Math.round(hours * 2) / 2;
+}
     
     // Get employee schedule for a date range
     getEmployeeSchedule(employeeId, startDate, endDate) {
