@@ -1,4 +1,4 @@
-// js/employees.js - FIXED VERSION
+// js/employees.js - FIXED SCHEDULE MANAGEMENT VERSION
 
 const API_URL = '../api/employees.php';
 const SCHEDULE_API = '../api/schedules.php';
@@ -37,13 +37,10 @@ function setupEventListeners() {
         filterStatus.addEventListener('change', renderEmployees);
     }
     
-    // Add Employee button - FIXED
+    // Add Employee button
     const addBtn = document.getElementById('addEmployeeBtn');
     if (addBtn) {
         addBtn.addEventListener('click', openAddModal);
-        console.log('✅ Add Employee button listener attached');
-    } else {
-        console.error('❌ Add Employee button not found!');
     }
     
     // Modal close buttons
@@ -265,52 +262,36 @@ function renderEmployees() {
 }
 
 // =============================================
-// MODAL FUNCTIONS - FIXED
+// MODAL FUNCTIONS
 // =============================================
 
 function openAddModal() {
-    console.log('📝 Opening Add Employee modal...');
+    console.log(' Opening Add Employee modal...');
     
     const modal = document.getElementById('employeeModal');
     const form = document.getElementById('employeeForm');
     const title = document.getElementById('modalTitle');
     
     if (!modal) {
-        console.error('❌ Employee modal not found!');
+        console.error('Employee modal not found!');
         showNotification('Modal element not found', 'error');
         return;
     }
     
-    // Reset form
-    if (form) {
-        form.reset();
-    }
+    if (form) form.reset();
+    if (title) title.textContent = 'Add New Employee';
     
-    // Set title
-    if (title) {
-        title.textContent = 'Add New Employee';
-    }
-    
-    // Generate new employee ID
     generateNextEmployeeId();
     
-    // Enable employee ID field for new employee
     const empIdInput = document.getElementById('employeeId');
-    if (empIdInput) {
-        empIdInput.removeAttribute('readonly');
-    }
+    if (empIdInput) empIdInput.removeAttribute('readonly');
     
-    // Clear editing flag
     editingEmployeeId = null;
-    
-    // Show modal
     modal.style.display = 'block';
-    
-    console.log('✅ Add Employee modal opened');
 }
 
 function openEditModal(employeeId) {
-    console.log('📝 Opening Edit Employee modal for:', employeeId);
+    console.log('Opening Edit Employee modal for:', employeeId);
     
     const employee = employees.find(e => e.employee_id === employeeId);
     if (!employee) {
@@ -322,17 +303,13 @@ function openEditModal(employeeId) {
     const title = document.getElementById('modalTitle');
     
     if (!modal) {
-        console.error('❌ Employee modal not found!');
+        console.error(' Employee modal not found!');
         return;
     }
     
-    // Set editing flag
     editingEmployeeId = employeeId;
     
-    // Set title
-    if (title) {
-        title.textContent = 'Edit Employee';
-    }
+    if (title) title.textContent = 'Edit Employee';
     
     // Populate form
     document.getElementById('employeeId').value = employee.employee_id;
@@ -352,30 +329,19 @@ function openEditModal(employeeId) {
     document.getElementById('tinNumber').value = employee.tin_number || '';
     document.getElementById('philhealthNumber').value = employee.philhealth_number || '';
     
-    // Disable employee ID field for editing
     document.getElementById('employeeId').setAttribute('readonly', true);
     
-    // Show modal
     modal.style.display = 'block';
-    
-    console.log('✅ Edit Employee modal opened');
 }
 
 function closeEmployeeModal() {
     const modal = document.getElementById('employeeModal');
     const form = document.getElementById('employeeForm');
     
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    
-    if (form) {
-        form.reset();
-    }
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
     
     editingEmployeeId = null;
-    
-    console.log('✅ Employee modal closed');
 }
 
 async function saveEmployee(e) {
@@ -428,26 +394,19 @@ async function saveEmployee(e) {
 }
 
 function generateNextEmployeeId() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    
-    // Find highest number for this month
     const prefix = `EMP`;
     const existingIds = employees
         .filter(e => e.employee_id.startsWith(prefix))
         .map(e => {
             const num = e.employee_id.split('-')[1];
-            return parseInt(num.substring(6)) || 0;
+            return parseInt(num) || 0;
         });
     
     const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
     const newId = `${prefix}-${String(nextNum).padStart(3, '0')}`;
     
     const empIdInput = document.getElementById('employeeId');
-    if (empIdInput) {
-        empIdInput.value = newId;
-    }
+    if (empIdInput) empIdInput.value = newId;
     
     return newId;
 }
@@ -468,11 +427,11 @@ function toggleBlocklistView() {
 }
 
 // =============================================
-// SCHEDULE MANAGEMENT - FIXED
+// SCHEDULE MANAGEMENT - FIXED VERSION
 // =============================================
 
 async function openScheduleModal(employeeId, employeeName) {
-    console.log('📅 Opening schedule modal for:', employeeId, employeeName);
+    console.log(' Opening schedule modal for:', employeeId, employeeName);
     
     currentScheduleEmployee = employeeId;
     const nameEl = document.getElementById('scheduleEmployeeName');
@@ -512,14 +471,19 @@ function closeScheduleModal() {
 
 async function loadEmployeeSchedule(employeeId) {
     try {
-        // Add cache busting to force fresh data
+        // FIXED: Add timestamp to prevent caching
         const timestamp = Date.now();
         
-        const currentResponse = await fetch(`${SCHEDULE_API}?action=current&t=${timestamp}`);
+        console.log('📥 Fetching schedules for employee:', employeeId);
+        
+        const currentResponse = await fetch(`${SCHEDULE_API}?action=current&_t=${timestamp}`);
         const currentResult = await currentResponse.json();
         
-        const nextResponse = await fetch(`${SCHEDULE_API}?action=next&t=${timestamp}`);
+        const nextResponse = await fetch(`${SCHEDULE_API}?action=next&_t=${timestamp}`);
         const nextResult = await nextResponse.json();
+        
+        console.log(' Current schedule result:', currentResult);
+        console.log(' Next schedule result:', nextResult);
         
         if (currentResult.success && nextResult.success) {
             renderEmployeeSchedule(employeeId, currentResult.data, nextResult.data);
@@ -537,6 +501,8 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
     
     const currentSchedule = currentData.filter(s => s.employee_id === employeeId);
     const nextSchedule = nextData.filter(s => s.employee_id === employeeId);
+    
+    console.log(' Rendering schedules - Current:', currentSchedule.length, 'Next:', nextSchedule.length);
     
     const currentDays = Array(7).fill(null);
     const nextDays = Array(7).fill(null);
@@ -592,6 +558,8 @@ function renderEmployeeSchedule(employeeId, currentData, nextData) {
             `;
         }).join('');
     }
+    
+    console.log('Schedule rendering complete');
 }
 
 function editScheduleDay(employeeId, dayIndex, week) {
@@ -681,26 +649,29 @@ async function saveSchedule(e) {
         
         const result = await response.json();
         
+        console.log('📥 Save result:', result);
+        
         if (result.success) {
-            showNotification('✅ Schedule updated successfully!', 'success');
+            showNotification('Schedule updated successfully!', 'success');
             closeScheduleEditModal();
             
-            // Force reload the employee schedule
-            console.log('🔄 Reloading employee schedule...');
+            // FIXED: Force reload the schedule with a small delay to ensure database is updated
+            console.log('🔄 Reloading schedule...');
+            
+            // Wait a moment for database to fully update
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Reload the schedule for this employee
             await loadEmployeeSchedule(employeeId);
             
-            console.log('✅ Schedule reloaded!');
+            console.log('Schedule reloaded!');
         } else {
-            showNotification('❌ ' + (result.message || 'Failed to update schedule'), 'error');
-            // Re-enable button
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Schedule';
-            }
+            showNotification(' ' + (result.message || 'Failed to update schedule'), 'error');
         }
     } catch (error) {
         console.error('Error saving schedule:', error);
-        showNotification('❌ Failed to update schedule', 'error');
+        showNotification('Failed to update schedule', 'error');
+    } finally {
         // Re-enable button
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -792,8 +763,7 @@ window.closeScheduleEditModal = closeScheduleEditModal;
 window.saveSchedule = saveSchedule;
 window.viewEmployee = function(id) { openEditModal(id); };
 window.toggleBlocklist = async function(employeeId, blocklist) {
-    // Placeholder for blocklist functionality
     console.log('Blocklist function called for:', employeeId, blocklist);
 };
 
-console.log('✅ Fixed employees.js loaded successfully');
+console.log('Fixed employees.js with schedule reload loaded successfully');

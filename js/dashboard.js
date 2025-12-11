@@ -111,7 +111,7 @@ async function loadEmployees() {
         
         if (result.success) {
             allEmployees = result.data || [];
-            console.log(`✅ Loaded ${allEmployees.length} employees`);
+            console.log(` Loaded ${allEmployees.length} employees`);
         } else {
             console.error('❌ Failed to load employees:', result.message);
             showNotification('Failed to load employees', 'error');
@@ -137,7 +137,7 @@ async function loadCurrentSchedule() {
         
         if (result.success) {
             currentWeekSchedule = result.data || [];
-            console.log(`✅ Loaded ${currentWeekSchedule.length} current week entries`);
+            console.log(`Loaded ${currentWeekSchedule.length} current week entries`);
             renderSchedule(currentWeekSchedule, 'scheduleTableBody', false);
         } else {
             console.error('❌ Current schedule error:', result.message);
@@ -164,7 +164,7 @@ async function loadNextSchedule() {
         
         if (result.success) {
             nextWeekSchedule = result.data || [];
-            console.log(`✅ Loaded ${nextWeekSchedule.length} next week entries`);
+            console.log(`Loaded ${nextWeekSchedule.length} next week entries`);
             renderSchedule(nextWeekSchedule, 'nextScheduleTableBody', true);
         } else {
             console.error('❌ Next schedule error:', result.message);
@@ -368,7 +368,7 @@ async function saveSchedule() {
         console.log('📥 API response:', result);
         
         if (result.success) {
-            showNotification('✅ Schedule updated successfully!', 'success');
+            showNotification(' Schedule updated successfully!', 'success');
             closeModal();
             
             // Force reload both schedules to ensure fresh data
@@ -378,7 +378,7 @@ async function saveSchedule() {
                 loadNextSchedule()
             ]);
             
-            console.log('✅ Schedules reloaded!');
+            console.log(' Schedules reloaded!');
         } else {
             showNotification('❌ ' + (result.message || 'Failed to update schedule'), 'error');
             // Re-enable button on error
@@ -441,7 +441,7 @@ async function copyScheduleToNext() {
         const result = await response.json();
         
         if (result.success) {
-            showNotification('✅ Schedule copied successfully!', 'success');
+            showNotification(' Schedule copied successfully!', 'success');
             await loadNextSchedule();
         } else {
             showNotification('❌ ' + (result.message || 'Failed to copy schedule'), 'error');
@@ -468,7 +468,7 @@ async function clearNextWeek() {
         const result = await response.json();
         
         if (result.success) {
-            showNotification('✅ Next week schedule cleared!', 'success');
+            showNotification('Next week schedule cleared!', 'success');
             await loadNextSchedule();
         } else {
             showNotification('❌ ' + (result.message || 'Failed to clear schedule'), 'error');
