@@ -632,3 +632,239 @@ window.printPayslip = printPayslip;
 window.payrollData = payrollData;
 
 console.log('✅ Payroll system loaded with archive functionality');
+
+// Enhanced Payroll.js with Full Edit Control
+
+const PAYROLL_API = '../api/payroll.php';
+let payrollData = [];
+let currentPeriod = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializePayPeriods();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // ... (keep existing sidebar, filter, search listeners)
+    
+    // Enhanced edit form listeners
+    document.getElementById('closeEditModalBtn')?.addEventListener('click', closeEditModal);
+    document.getElementById('cancelEditBtn')?.addEventListener('click', closeEditModal);
+    document.getElementById('editForm')?.addEventListener('submit', handleEnhancedEditSubmit);
+    
+    // Real-time calculation listeners
+    const calcInputs = ['editBasicSalary', 'editOvertimeHours', 'editOvertimeRate', 
+                        'editLateDeductions', 'editOtherDeductions'];
+    
+    calcInputs.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updatePayrollSummary);
+    });
+    
+    // ... (keep other listeners)
+}
+
+function editPayroll(id) {
+    const payroll = payrollData.find(p => p.payroll_id == id);
+    if (!payroll) return;
+    
+    // Populate form fields
+    document.getElementById('editPayrollId').value = payroll.payroll_id;
+    document.getElementById('editEmployeeId').value = payroll.employee_id;
+    document.getElementById('editName').value = payroll.name;
+    document.getElementById('editPosition').value = payroll.position;
+    document.getElementById('editDepartment').value = payroll.department;
+    
+    // ✅ ENHANCED: Populate all editable fields
+    document.getElementById('editBasicSalary').value = parseFloat(payroll.basic_salary).toFixed(2);
+    document.getElementById('currentBasicSalary').value = '₱' + formatNumber(payroll.basic_salary);
+    document.getElementById('editOvertimeHours').value = parseFloat(payroll.overtime_hours).toFixed(2);
+    document.getElementById('editOvertimeRate').value = parseFloat(payroll.overtime_rate).toFixed(2);
+    document.getElementById('editLateDeductions').value = parseFloat(payroll.late_deductions).toFixed(2);
+    document.getElementById('editOtherDeductions').value = parseFloat(payroll.other_deductions).toFixed(2);
+    
+    // Update summary immediately
+    updatePayrollSummary();
+    
+    // Show modal
+    document.getElementById('editModal').style.display = 'block';
+}
+
+function updatePayrollSummary() {
+    // Get values
+    const basicSalary = parseFloat(document.getElementById('editBasicSalary').value) || 0;
+    const overtimeHours = parseFloat(document.getElementById('editOvertimeHours').value) || 0;
+    const overtimeRate = parseFloat(document.getElementById('editOvertimeRate').value) || 0;
+    const lateDeductions = parseFloat(document.getElementById('editLateDeductions').value) || 0;
+    const otherDeductions = parseFloat(document.getElementById('editOtherDeductions').value) || 0;
+    
+    // Calculate
+    const overtimePay = overtimeHours * overtimeRate;
+    const grossPay = basicSalary + overtimePay;
+    const totalDeductions = lateDeductions + otherDeductions;
+    const netPay = grossPay - totalDeductions;
+    
+    // Update calculated overtime pay display
+    document.getElementById('calculatedOvertimePay').textContent = '₱' + formatNumber(overtimePay);
+    
+    // Update summary section
+    document.getElementById('summaryBasic').textContent = '₱' + formatNumber(basicSalary);
+    document.getElementById('summaryOvertime').textContent = '₱' + formatNumber(overtimePay);
+    document.getElementById('summaryGross').textContent = '₱' + formatNumber(grossPay);
+    document.getElementById('summaryDeductions').textContent = '₱' + formatNumber(totalDeductions);
+    document.getElementById('summaryNet').textContent = '₱' + formatNumber(netPay);
+    
+    // Add visual feedback for changes
+    const netElement = document.getElementById('summaryNet');
+    netElement.style.animation = 'pulse 0.3s ease';
+    setTimeout(() => {
+        netElement.style.animation = '';
+    }, 300);
+}
+
+async function handleEnhancedEditSubmit(e) {
+    e.preventDefault();
+    
+    // Get all values
+    const data = {
+        payroll_id: document.getElementById('editPayrollId').value,
+        basic_salary: parseFloat(document.getElementById('editBasicSalary').value),
+        overtime_hours: parseFloat(document.getElementById('editOvertimeHours').value),
+        overtime_rate: parseFloat(document.getElementById('editOvertimeRate').value),
+        late_deductions: parseFloat(document.getElementById('editLateDeductions').value),
+        other_deductions: parseFloat(document.getElementById('editOtherDeductions').value)
+    };
+    
+    // Validate
+    if (data.basic_salary < 0 || isNaN(data.basic_salary)) {
+        showNotification('error', 'Error', 'Basic salary must be a valid positive number');
+        return;
+    }
+    
+    if (data.overtime_hours < 0 || data.overtime_rate < 0) {
+        showNotification('error', 'Error', 'Overtime values cannot be negative');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('#editForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    try {
+        const response = await fetch(`${PAYROLL_API}?action=update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Success', 'Payroll updated successfully! ✓');
+            closeEditModal();
+            await loadPayroll();
+        } else {
+            showNotification('error', 'Error', result.message || 'Failed to update payroll');
+        }
+    } catch (error) {
+        console.error('Error updating payroll:', error);
+        showNotification('error', 'Error', 'Failed to update payroll');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('editForm').reset();
+}
+
+function formatNumber(num) {
+    return parseFloat(num || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function showNotification(type, title, message) {
+    const container = document.getElementById('notificationContainer') || createNotificationContainer();
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#ffc107'};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInRight 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    `;
+    
+    notification.innerHTML = `
+        <i class="notification-icon fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}" 
+           style="font-size: 20px;"></i>
+        <div class="notification-content" style="flex: 1;">
+            <div class="notification-title" style="font-weight: 600; margin-bottom: 4px;">${title}</div>
+            <div class="notification-message" style="font-size: 13px; opacity: 0.9;">${message}</div>
+        </div>
+        <span class="notification-close" onclick="this.parentElement.remove()" 
+              style="cursor: pointer; font-size: 20px; opacity: 0.7; transition: opacity 0.2s;"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">×</span>
+    `;
+    
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+function createNotificationContainer() {
+    const container = document.createElement('div');
+    container.id = 'notificationContainer';
+    container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        max-width: 400px;
+    `;
+    document.body.appendChild(container);
+    return container;
+}
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+`;
+document.head.appendChild(style);
+
+// Make functions globally accessible
+window.editPayroll = editPayroll;
+window.payrollData = payrollData;
+
+console.log('✅ Enhanced Payroll system loaded with full edit control');

@@ -143,58 +143,351 @@ $user = getCurrentUser();
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Edit Payroll Details</h2>
-                <button class="close-modal" id="closeEditModalBtn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="editForm">
-                    <input type="hidden" id="editEmployeeId">
-                    <div class="form-group">
-                        <label>Employee Name</label>
-                        <input type="text" id="editName" readonly>
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> Edit Payroll Details</h2>
+            <button class="close-modal" id="closeEditModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editForm">
+                <input type="hidden" id="editPayrollId">
+                
+                <!-- Employee Info (Read-only) -->
+                <div class="info-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Employee Name</label>
+                            <input type="text" id="editName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-id-badge"></i> Employee ID</label>
+                            <input type="text" id="editEmployeeId" readonly>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Position</label>
+                            <label><i class="fas fa-briefcase"></i> Position</label>
                             <input type="text" id="editPosition" readonly>
                         </div>
                         <div class="form-group">
-                            <label>Department</label>
+                            <label><i class="fas fa-building"></i> Department</label>
                             <input type="text" id="editDepartment" readonly>
                         </div>
                     </div>
-                    <div class="section-title">Additional Pay</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Overtime Hours</label>
-                            <input type="number" id="editOvertimeHours" step="0.5" min="0" value="0">
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- ✅ ENHANCED: Editable Basic Salary -->
+                <div class="section-title">
+                    <i class="fas fa-money-bill-wave"></i> Basic Compensation
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Basic Salary (₱) *</label>
+                        <input type="number" id="editBasicSalary" step="0.01" min="0" required>
+                        <small class="form-hint">Base pay for the period (editable)</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Value</label>
+                        <input type="text" id="currentBasicSalary" readonly style="background: #f8f9fa;">
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Overtime Section -->
+                <div class="section-title">
+                    <i class="fas fa-clock"></i> Overtime
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Overtime Hours</label>
+                        <input type="number" id="editOvertimeHours" step="0.5" min="0" value="0">
+                        <small class="form-hint">Hours worked beyond standard time</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Overtime Rate (₱/hour)</label>
+                        <input type="number" id="editOvertimeRate" step="0.01" min="0" value="0">
+                        <small class="form-hint">Rate per overtime hour</small>
+                    </div>
+                </div>
+                <div class="calculated-field">
+                    <label>Calculated Overtime Pay:</label>
+                    <span id="calculatedOvertimePay">₱0.00</span>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Deductions Section -->
+                <div class="section-title">
+                    <i class="fas fa-minus-circle"></i> Deductions
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Late Deductions (₱)</label>
+                        <input type="number" id="editLateDeductions" step="0.01" min="0" value="0">
+                        <small class="form-hint">Deductions for tardiness</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Other Deductions (₱)</label>
+                        <input type="number" id="editOtherDeductions" step="0.01" min="0" value="0">
+                        <small class="form-hint">SSS, PhilHealth, Pag-IBIG, etc.</small>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Summary Section -->
+                <div class="summary-section">
+                    <h3><i class="fas fa-calculator"></i> Payroll Summary</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span>Basic Salary:</span>
+                            <strong id="summaryBasic">₱0.00</strong>
                         </div>
-                        <div class="form-group">
-                            <label>Overtime Rate (₱/hour)</label>
-                            <input type="number" id="editOvertimeRate" step="0.01" min="0" value="0">
+                        <div class="summary-item">
+                            <span>Overtime Pay:</span>
+                            <strong id="summaryOvertime">₱0.00</strong>
+                        </div>
+                        <div class="summary-item total">
+                            <span>Gross Pay:</span>
+                            <strong id="summaryGross">₱0.00</strong>
+                        </div>
+                        <div class="summary-item deduction">
+                            <span>Total Deductions:</span>
+                            <strong id="summaryDeductions">₱0.00</strong>
+                        </div>
+                        <div class="summary-item net">
+                            <span>NET PAY:</span>
+                            <strong id="summaryNet">₱0.00</strong>
                         </div>
                     </div>
-                    <div class="section-title">Deductions</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Late Deductions (₱)</label>
-                            <input type="number" id="editLateDeductions" step="0.01" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Other Deductions (₱)</label>
-                            <input type="number" id="editOtherDeductions" step="0.01" min="0" value="0">
-                        </div>
-                    </div>
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" id="cancelEditBtn">Cancel</button>
-                        <button type="submit" class="save-btn">Save Changes</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="button" class="cancel-btn" id="cancelEditBtn">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
+
+<style>
+/* Enhanced Modal Styles */
+.info-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 20px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.divider {
+    height: 1px;
+    background: #eee;
+    margin: 25px 0;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-group input {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #222;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.form-group input[readonly] {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    color: #666;
+}
+
+.form-hint {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.calculated-field {
+    background: #fff3cd;
+    padding: 12px;
+    border-radius: 5px;
+    border-left: 4px solid #ffc107;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.calculated-field label {
+    font-weight: 500;
+    color: #856404;
+}
+
+.calculated-field span {
+    font-size: 16px;
+    font-weight: 600;
+    color: #856404;
+}
+
+.summary-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.summary-section h3 {
+    color: white;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summary-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.summary-item {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 12px 15px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.summary-item.total {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+.summary-item.deduction {
+    background: #ffebee;
+    border-left: 4px solid #f44336;
+}
+
+.summary-item.net {
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    font-size: 16px;
+    padding: 15px;
+}
+
+.summary-item span {
+    color: #666;
+    font-weight: 500;
+}
+
+.summary-item strong {
+    color: #222;
+    font-size: 15px;
+}
+
+.summary-item.net strong {
+    font-size: 20px;
+    color: #2e7d32;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.save-btn, .cancel-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.save-btn {
+    background: #222;
+    color: white;
+}
+
+.save-btn:hover {
+    background: #111;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.cancel-btn {
+    background: #6c757d;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: #5a6268;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
     <!-- Payslip Modal -->
     <div id="payslipModal" class="modal">

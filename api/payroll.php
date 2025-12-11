@@ -1,5 +1,5 @@
 <?php
-// api/payroll.php - COMPREHENSIVE FIX
+// api/payroll.php - ENHANCED VERSION with Full Edit Control
 require_once '../config/config.php';
 requireLogin();
 
@@ -203,7 +203,7 @@ try {
                 // Get all dates in pay period
                 $start = new DateTime($payroll['pay_period_start']);
                 $end = new DateTime($payroll['pay_period_end']);
-                $end->modify('+1 day'); // Include end date
+                $end->modify('+1 day');
                 $period = new DatePeriod($start, new DateInterval('P1D'), $end);
                 
                 $allDates = [];
@@ -260,7 +260,6 @@ try {
                 foreach ($attendanceRecords as $record) {
                     $date = $record['attendance_date'];
                     
-                    // Recalculate hours to ensure accuracy
                     $hours = 0;
                     $nightHours = 0;
                     
@@ -278,24 +277,20 @@ try {
                         );
                     }
                     
-                    // Calculate regular and overtime hours
                     $regularHours = min($hours, STANDARD_HOURS);
                     $overtimeHours = max(0, $hours - STANDARD_HOURS);
                     
-                    // Determine shift type
                     $shiftType = 'Regular';
                     if ($record['time_in'] && $record['time_out']) {
                         $timeInHour = (int)date('H', strtotime($record['time_in']));
                         $timeOutHour = (int)date('H', strtotime($record['time_out']));
                         
-                        // If time out hour is less than time in hour, it's overnight
                         if ($timeOutHour < $timeInHour || 
                             ($timeInHour >= 18 || $timeInHour < 6)) {
                             $shiftType = 'Overnight';
                         }
                     }
                     
-                    // Update status counts
                     if ($record['status'] === 'Present') {
                         $breakdown['present_days']++;
                         $breakdown['total_days_worked']++;
@@ -310,7 +305,6 @@ try {
                     $breakdown['total_night_hours'] += $nightHours;
                     $breakdown['total_overtime_hours'] += $overtimeHours;
                     
-                    // Update the all dates array with actual data
                     if (isset($allDates[$date])) {
                         $allDates[$date] = [
                             'date' => $date,
@@ -328,19 +322,16 @@ try {
                     }
                 }
                 
-                // Count absent days (days with no attendance record)
                 foreach ($allDates as $dateData) {
                     if ($dateData['status'] === 'Absent' && 
-                        $dateData['day_name'] !== 'Sunday') { // Don't count Sundays
+                        $dateData['day_name'] !== 'Sunday') {
                         $breakdown['absent_days']++;
                     }
                 }
                 
-                // Sort and assign to breakdown
                 ksort($allDates);
                 $breakdown['daily_records'] = array_values($allDates);
                 
-                // Calculate actual pay breakdown
                 $regularPay = $breakdown['total_regular_hours'] * $hourlyRate;
                 $nightDiffPay = $breakdown['total_night_hours'] * $hourlyRate * NIGHT_DIFF_RATE;
                 $overtimePay = $breakdown['total_overtime_hours'] * $hourlyRate * OVERTIME_MULTIPLIER;
@@ -365,26 +356,42 @@ try {
             if ($action === 'update') {
                 $data = json_decode(file_get_contents('php://input'), true);
                 
-                $overtimePay = $data['overtime_hours'] * $data['overtime_rate'];
-                $grossPay = $data['basic_salary'] + $overtimePay;
-                $totalDeductions = $data['late_deductions'] + $data['other_deductions'];
+                // ✅ ENHANCED: Allow full control over all payroll fields
+                $basicSalary = isset($data['basic_salary']) ? floatval($data['basic_salary']) : 0;
+                $overtimeHours = isset($data['overtime_hours']) ? floatval($data['overtime_hours']) : 0;
+                $overtimeRate = isset($data['overtime_rate']) ? floatval($data['overtime_rate']) : 0;
+                $overtimePay = $overtimeHours * $overtimeRate;
+                $lateDeductions = isset($data['late_deductions']) ? floatval($data['late_deductions']) : 0;
+                $otherDeductions = isset($data['other_deductions']) ? floatval($data['other_deductions']) : 0;
+                
+                // Calculate totals
+                $grossPay = $basicSalary + $overtimePay;
+                $totalDeductions = $lateDeductions + $otherDeductions;
                 $netPay = $grossPay - $totalDeductions;
                 
                 $stmt = $db->prepare("
                     UPDATE payroll 
-                    SET overtime_hours = ?, overtime_rate = ?, overtime_pay = ?,
-                        gross_pay = ?, late_deductions = ?, other_deductions = ?,
-                        total_deductions = ?, net_pay = ?, status = 'Configured'
+                    SET basic_salary = ?,
+                        overtime_hours = ?, 
+                        overtime_rate = ?, 
+                        overtime_pay = ?,
+                        gross_pay = ?, 
+                        late_deductions = ?, 
+                        other_deductions = ?,
+                        total_deductions = ?, 
+                        net_pay = ?, 
+                        status = 'Configured'
                     WHERE payroll_id = ?
                 ");
                 
                 $result = $stmt->execute([
-                    $data['overtime_hours'],
-                    $data['overtime_rate'],
+                    $basicSalary,
+                    $overtimeHours,
+                    $overtimeRate,
                     $overtimePay,
                     $grossPay,
-                    $data['late_deductions'],
-                    $data['other_deductions'],
+                    $lateDeductions,
+                    $otherDeductions,
                     $totalDeductions,
                     $netPay,
                     $data['payroll_id']
@@ -392,8 +399,10 @@ try {
                 
                 if ($result) {
                     logAudit($db, 'payroll', 'Payroll Updated', 
-                        "Updated payroll (OT approved by owner)", 'fa-edit');
+                        "Updated payroll ID {$data['payroll_id']} - Net Pay: ₱{$netPay}", 'fa-edit');
                     jsonResponse(true, 'Payroll updated successfully');
+                } else {
+                    jsonResponse(false, 'Failed to update payroll');
                 }
             }
             break;
@@ -636,10 +645,6 @@ function calculateSSS($grossPay) {
     if ($grossPay < 11750) return 517.50;
     if ($grossPay < 12250) return 540.00;
     if ($grossPay < 12750) return 562.50;
-    if ($grossPay < 13250) return 585.00;
-    if ($grossPay < 13750) return 607.50;
-    if ($grossPay < 14250) return 630.00;
-    if ($grossPay < 14750) return 652.50;
     return 900.00;
 }
 
