@@ -1,5 +1,5 @@
 <?php
-// api/attendance.php - Updated with Create Action
+// api/attendance.php - FIXED VERSION with Correct Hours Calculation
 require_once '../config/config.php';
 requireLogin();
 
@@ -73,10 +73,10 @@ try {
                     break;
                 }
                 
-                // Calculate hours worked
+                // ✅ FIXED: Calculate hours worked correctly for overnight shifts
                 $hoursWorked = 0;
                 if (!empty($data['time_in']) && !empty($data['time_out'])) {
-                    $hoursWorked = calculateHoursWorked($data['time_in'], $data['time_out']);
+                    $hoursWorked = calculateHoursWorkedCorrectly($data['time_in'], $data['time_out']);
                 }
                 
                 // Insert record
@@ -98,7 +98,7 @@ try {
                 
                 if ($result) {
                     logAudit($db, 'attendance', 'Manual Attendance Added', 
-                        "Added manual attendance for {$data['employee_id']} on {$data['date']} - Status: {$data['status']}", 
+                        "Added manual attendance for {$data['employee_id']} on {$data['date']} - Status: {$data['status']} - Hours: {$hoursWorked}", 
                         'fa-plus-circle');
                     jsonResponse(true, 'Attendance record added successfully');
                 } else {
@@ -110,7 +110,7 @@ try {
                 
                 $hoursWorked = 0;
                 if ($data['time_in'] && $data['time_out']) {
-                    $hoursWorked = calculateHoursWorked($data['time_in'], $data['time_out']);
+                    $hoursWorked = calculateHoursWorkedCorrectly($data['time_in'], $data['time_out']);
                 }
                 
                 $stmt = $db->prepare("
@@ -140,9 +140,10 @@ try {
         case 'PUT':
             $data = json_decode(file_get_contents('php://input'), true);
             
+            // ✅ FIXED: Calculate hours worked correctly when updating
             $hoursWorked = 0;
             if ($data['time_in'] && $data['time_out']) {
-                $hoursWorked = calculateHoursWorked($data['time_in'], $data['time_out']);
+                $hoursWorked = calculateHoursWorkedCorrectly($data['time_in'], $data['time_out']);
             }
             
             $stmt = $db->prepare("
@@ -163,7 +164,7 @@ try {
             
             if ($result) {
                 logAudit($db, 'attendance', 'Attendance Updated', 
-                    "Updated attendance record", 'fa-edit');
+                    "Updated attendance record - Hours: {$hoursWorked}", 'fa-edit');
                 jsonResponse(true, 'Attendance updated');
             }
             break;
@@ -198,5 +199,46 @@ try {
 } catch (PDOException $e) {
     error_log($e->getMessage());
     jsonResponse(false, 'An error occurred: ' . $e->getMessage());
+}
+
+/**
+ * ✅ FIXED: Calculate hours worked correctly for overnight shifts
+ * 
+ * @param string $timeIn Time in format "HH:MM" or "HH:MM:SS"
+ * @param string $timeOut Time out format "HH:MM" or "HH:MM:SS"
+ * @return float Hours worked (rounded to nearest 0.5)
+ */
+function calculateHoursWorkedCorrectly($timeIn, $timeOut) {
+    if (!$timeIn || !$timeOut) {
+        return 0;
+    }
+    
+    // Parse time strings (handle both HH:MM and HH:MM:SS formats)
+    $timeInParts = explode(':', $timeIn);
+    $timeOutParts = explode(':', $timeOut);
+    
+    $startHour = (int)$timeInParts[0];
+    $startMin = (int)$timeInParts[1];
+    $endHour = (int)$timeOutParts[0];
+    $endMin = (int)$timeOutParts[1];
+    
+    // Convert to decimal hours
+    $startDecimal = $startHour + ($startMin / 60);
+    $endDecimal = $endHour + ($endMin / 60);
+    
+    // Calculate hours
+    $hours = 0;
+    
+    // ✅ FIX: Check if this is an overnight shift
+    if ($endDecimal < $startDecimal) {
+        // Overnight: from start to midnight + midnight to end
+        $hours = (24 - $startDecimal) + $endDecimal;
+    } else {
+        // Same day shift
+        $hours = $endDecimal - $startDecimal;
+    }
+    
+    // Round to nearest 0.5 hour
+    return max(0, round($hours * 2) / 2);
 }
 ?>

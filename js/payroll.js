@@ -373,72 +373,207 @@ async function handleEditSubmit(e) {
     }
 }
 
-function viewPayslip(id) {
-    const payroll = payrollData.find(p => p.payroll_id == id);
-    if (!payroll) return;
-    
-    const content = document.getElementById('payslipContent');
-    content.innerHTML = `
-        <div class="payslip-header">
-            <h2>Grande. PAN DE SAL + COFFEE</h2>
-            <p>Employee Payslip</p>
-        </div>
+// Add this function to js/payroll.js
+// Replace the existing viewPayslip function
+
+async function viewPayslip(id) {
+    try {
+        // Fetch detailed payslip data
+        const response = await fetch(`${PAYROLL_API}?action=payslip-detail&id=${id}`);
+        const result = await response.json();
         
-        <div class="payslip-info">
-            <div class="info-group">
-                <p><strong>Employee ID:</strong> ${payroll.employee_id}</p>
-                <p><strong>Name:</strong> ${payroll.name}</p>
-                <p><strong>Position:</strong> ${payroll.position}</p>
-                <p><strong>Department:</strong> ${payroll.department}</p>
-            </div>
-            <div class="info-group">
-                <p><strong>Pay Period:</strong> ${formatDate(payroll.pay_period_start)} - ${formatDate(payroll.pay_period_end)}</p>
-                <p><strong>Pay Date:</strong> ${formatDate(payroll.created_at)}</p>
-                <p><strong>Status:</strong> ${payroll.status}</p>
-            </div>
-        </div>
+        if (!result.success) {
+            showNotification('error', 'Error', result.message);
+            return;
+        }
         
-        <div class="payslip-details">
-            <div class="section-title">Earnings</div>
-            <div class="detail-row">
-                <span>Basic Salary</span>
-                <span>₱${formatNumber(payroll.basic_salary)}</span>
-            </div>
-            <div class="detail-row">
-                <span>Overtime Pay (${payroll.overtime_hours} hrs @ ₱${formatNumber(payroll.overtime_rate)}/hr)</span>
-                <span>₱${formatNumber(payroll.overtime_pay)}</span>
-            </div>
-            <div class="detail-row total">
-                <span>Gross Pay</span>
-                <span>₱${formatNumber(payroll.gross_pay)}</span>
+        const data = result.data;
+        const payroll = data.payroll;
+        const breakdown = data.breakdown;
+        const hourlyRate = data.hourly_rate;
+        
+        const content = document.getElementById('payslipContent');
+        content.innerHTML = `
+            <div class="payslip-header">
+                <h2>Grande. PAN DE SAL + COFFEE</h2>
+                <p>Employee Payslip</p>
             </div>
             
-            <div class="section-title">Deductions</div>
-            <div class="detail-row">
-                <span>Late Deductions</span>
-                <span>₱${formatNumber(payroll.late_deductions)}</span>
-            </div>
-            <div class="detail-row">
-                <span>Other Deductions (SSS, PhilHealth, Pag-IBIG)</span>
-                <span>₱${formatNumber(payroll.other_deductions)}</span>
-            </div>
-            <div class="detail-row total">
-                <span>Total Deductions</span>
-                <span>₱${formatNumber(payroll.total_deductions)}</span>
+            <div class="payslip-info">
+                <div class="info-group">
+                    <p><strong>Employee ID:</strong> ${payroll.employee_id}</p>
+                    <p><strong>Name:</strong> ${payroll.name}</p>
+                    <p><strong>Position:</strong> ${payroll.position}</p>
+                    <p><strong>Department:</strong> ${payroll.department}</p>
+                </div>
+                <div class="info-group">
+                    <p><strong>Pay Period:</strong> ${formatDate(payroll.pay_period_start)} - ${formatDate(payroll.pay_period_end)}</p>
+                    <p><strong>Pay Date:</strong> ${formatDate(payroll.created_at)}</p>
+                    <p><strong>Status:</strong> ${payroll.status}</p>
+                </div>
             </div>
             
-            <div class="detail-row total" style="margin-top: 20px; font-size: 20px; background: #f8f9fa; padding: 15px;">
-                <span>NET PAY</span>
-                <span>₱${formatNumber(payroll.net_pay)}</span>
+            <!-- Daily Attendance Breakdown -->
+            <div class="attendance-breakdown" style="margin: 25px 0;">
+                <h3 style="background: #f8f9fa; padding: 12px 15px; margin: 0 -20px 15px -20px; border-left: 4px solid #222; font-size: 16px; color: #333;">
+                    📅 Daily Attendance Breakdown
+                </h3>
+                
+                <div style="overflow-x: auto; margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #222; color: white;">
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Day</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Time In</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Time Out</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Hours</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Night Diff</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${breakdown.daily_records.map(record => `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 10px; border: 1px solid #eee;">${formatDate(record.date)}</td>
+                                    <td style="padding: 10px; border: 1px solid #eee; color: #666;">${record.day_name}</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid #eee;">${record.time_in}</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid #eee;">${record.time_out}</td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid #eee; font-weight: bold;">
+                                        ${record.hours_worked.toFixed(1)}h
+                                        ${record.shift_type === 'Overnight' ? '<span style="color: #dc3545; font-size: 10px; display: block;">🌙 Overnight</span>' : ''}
+                                    </td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid #eee; color: #ffc107; font-weight: bold;">
+                                        ${record.night_hours > 0 ? record.night_hours.toFixed(1) + 'h' : '-'}
+                                    </td>
+                                    <td style="padding: 10px; text-align: center; border: 1px solid #eee;">
+                                        <span style="
+                                            padding: 4px 8px; 
+                                            border-radius: 4px; 
+                                            font-size: 11px; 
+                                            font-weight: bold;
+                                            background: ${record.status === 'Present' ? '#d4edda' : record.status === 'Late' ? '#fff3cd' : record.status === 'Absent' ? '#f8d7da' : '#d1ecf1'};
+                                            color: ${record.status === 'Present' ? '#155724' : record.status === 'Late' ? '#856404' : record.status === 'Absent' ? '#721c24' : '#0c5460'};
+                                        ">
+                                            ${record.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot style="background: #f8f9fa; font-weight: bold;">
+                            <tr>
+                                <td colspan="4" style="padding: 10px; text-align: right; border: 1px solid #ddd;">TOTAL:</td>
+                                <td style="padding: 10px; text-align: center; border: 1px solid #ddd; color: #222;">
+                                    ${breakdown.total_regular_hours.toFixed(1)}h
+                                </td>
+                                <td style="padding: 10px; text-align: center; border: 1px solid #ddd; color: #ffc107;">
+                                    ${breakdown.total_night_hours.toFixed(1)}h
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #ddd;"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0;">
+                    <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #2e7d32;">${breakdown.present_days}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">Present</div>
+                    </div>
+                    <div style="background: #fff3e0; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #ef6c00;">${breakdown.late_days}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">Late</div>
+                    </div>
+                    <div style="background: #ffebee; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #c62828;">${breakdown.absent_days}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">Absent</div>
+                    </div>
+                    <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #1565c0;">${breakdown.leave_days}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">On Leave</div>
+                    </div>
+                </div>
             </div>
-        </div>
+            
+            <div class="payslip-details">
+                <div class="section-title">Earnings</div>
+                <div class="detail-row">
+                    <span>Basic Salary (${breakdown.total_regular_hours.toFixed(1)} hrs × ₱${hourlyRate.toFixed(2)}/hr)</span>
+                    <span>₱${formatNumber(payroll.basic_salary)}</span>
+                </div>
+                ${breakdown.total_night_hours > 0 ? `
+                <div class="detail-row">
+                    <span>Night Differential (${breakdown.total_night_hours.toFixed(1)} hrs × ₱${hourlyRate.toFixed(2)} × 10%)</span>
+                    <span>₱${formatNumber(breakdown.total_night_hours * hourlyRate * 0.10)}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                    <span>Overtime Pay (${payroll.overtime_hours} hrs @ ₱${formatNumber(payroll.overtime_rate)}/hr)</span>
+                    <span>₱${formatNumber(payroll.overtime_pay)}</span>
+                </div>
+                <div class="detail-row total">
+                    <span>Gross Pay</span>
+                    <span>₱${formatNumber(payroll.gross_pay)}</span>
+                </div>
+                
+                <div class="section-title">Deductions</div>
+                <div class="detail-row">
+                    <span>Late Deductions</span>
+                    <span>₱${formatNumber(payroll.late_deductions)}</span>
+                </div>
+                <div class="detail-row">
+                    <span>Other Deductions (SSS, PhilHealth, Pag-IBIG)</span>
+                    <span>₱${formatNumber(payroll.other_deductions)}</span>
+                </div>
+                <div class="detail-row total">
+                    <span>Total Deductions</span>
+                    <span>₱${formatNumber(payroll.total_deductions)}</span>
+                </div>
+                
+                <div class="detail-row total" style="margin-top: 20px; font-size: 20px; background: #f8f9fa; padding: 15px;">
+                    <span>NET PAY</span>
+                    <span>₱${formatNumber(payroll.net_pay)}</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center; color: #666; font-size: 12px;">
+                <p style="margin: 0;">This is a computer-generated payslip and does not require a signature.</p>
+                <p style="margin: 5px 0 0 0;">For any questions or concerns, please contact HR Department.</p>
+            </div>
+            
+            <button class="print-btn" onclick="printPayslip()">
+                <i class="fas fa-print"></i> Print Payslip
+            </button>
+        `;
         
-        <button class="print-btn" onclick="printPayslip()">
-            <i class="fas fa-print"></i> Print Payslip
-        </button>
-    `;
+        document.getElementById('payslipModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading detailed payslip:', error);
+        showNotification('error', 'Error', 'Failed to load payslip details');
+    }
+}
+
+// Update the print function to hide the daily breakdown when printing (optional)
+function printPayslip() {
+    // Store original title
+    const originalTitle = document.title;
     
-    document.getElementById('payslipModal').style.display = 'block';
+    // Get payslip content
+    const payslipContent = document.getElementById('payslipContent');
+    const employeeName = payslipContent.querySelector('.info-group p strong').nextSibling.textContent.trim();
+    
+    // Set title for print
+    document.title = `Payslip - ${employeeName}`;
+    
+    // Print
+    window.print();
+    
+    // Restore title
+    setTimeout(() => {
+        document.title = originalTitle;
+    }, 100);
 }
 
 function closePayslipModal() {
