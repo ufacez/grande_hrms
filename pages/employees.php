@@ -118,7 +118,8 @@ $user = getCurrentUser();
                 <a href="dashboard.php" class="nav-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
                 <a href="employees.php" class="nav-item active"><i class="fas fa-users"></i><span>Employees</span></a>
                 <a href="attendance.php" class="nav-item"><i class="fas fa-clock"></i><span>Attendance</span></a>
-                <a href="biometric.php" class="nav-item"><i class="fas fa-fingerprint"></i><span>Biometric</span></a>
+                <a href="zkteco-import.php" class="nav-item"><i class="fas fa-file-import"></i><span>ZKTeco Import</span></a>
+                <a href="zkteco-mapping.php" class="nav-item"><i class="fas fa-link"></i><span>ID Mapping</span></a>
                 <a href="payroll.php" class="nav-item"><i class="fas fa-money-bill-wave"></i><span>Payroll</span></a>
                 <a href="settings.php" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
             </div>
