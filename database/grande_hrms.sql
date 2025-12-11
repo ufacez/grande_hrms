@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 12, 2025 at 12:23 AM
+-- Generation Time: Dec 12, 2025 at 12:40 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -345,7 +345,22 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `username`, `password_hash`, `full_name`, `email`, `role`, `created_at`, `last_login`, `is_active`) VALUES
-(1, 'admin', '$2y$10$RAj0A1dW1NI19PvOjuLftOuKnfSfPd9BljgQ7cOJkuGcWztBd9RZu', 'System Administrator', 'admin@grande.com', 'admin', '2025-12-10 23:47:26', '2025-12-11 12:04:00', 1);
+(1, 'admin', '$2y$10$RAj0A1dW1NI19PvOjuLftOuKnfSfPd9BljgQ7cOJkuGcWztBd9RZu', 'System Administrator', 'admin@grande.com', 'admin', '2025-12-10 23:47:26', '2025-12-11 23:26:09', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `zkteco_mapping`
+--
+
+CREATE TABLE `zkteco_mapping` (
+  `mapping_id` int(11) NOT NULL,
+  `zkteco_id` varchar(50) NOT NULL COMMENT 'Badge/AC-No from ZKTeco device',
+  `employee_id` varchar(20) NOT NULL COMMENT 'Employee ID in your system',
+  `employee_name` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -455,6 +470,14 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `zkteco_mapping`
+--
+ALTER TABLE `zkteco_mapping`
+  ADD PRIMARY KEY (`mapping_id`),
+  ADD UNIQUE KEY `unique_zkteco` (`zkteco_id`),
+  ADD KEY `idx_employee` (`employee_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -507,6 +530,12 @@ ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `zkteco_mapping`
+--
+ALTER TABLE `zkteco_mapping`
+  MODIFY `mapping_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -545,6 +574,12 @@ ALTER TABLE `payroll`
 --
 ALTER TABLE `schedules`
   ADD CONSTRAINT `schedules_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `zkteco_mapping`
+--
+ALTER TABLE `zkteco_mapping`
+  ADD CONSTRAINT `fk_zkteco_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
