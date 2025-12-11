@@ -441,7 +441,7 @@ async function viewPayslip(id) {
                                     <td style="padding: 10px; text-align: center; border: 1px solid #eee;">${record.time_out}</td>
                                     <td style="padding: 10px; text-align: center; border: 1px solid #eee; font-weight: bold;">
                                         ${record.hours_worked.toFixed(1)}h
-                                        ${record.shift_type === 'Overnight' ? '<span style="color: #dc3545; font-size: 10px; display: block;">🌙 Overnight</span>' : ''}
+                                        ${record.shift_type === 'Overnight' ? '<span style="color: #dc3545; font-size: 10px; display: block;">Overnight</span>' : ''}
                                     </td>
                                     <td style="padding: 10px; text-align: center; border: 1px solid #eee; color: #ffc107; font-weight: bold;">
                                         ${record.night_hours > 0 ? record.night_hours.toFixed(1) + 'h' : '-'}

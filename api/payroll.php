@@ -1,5 +1,5 @@
 <?php
-// api/payroll.php - FIXED VERSION with Proper Night Shift Calculation
+// api/payroll.php - COMPREHENSIVE FIX
 require_once '../config/config.php';
 requireLogin();
 
@@ -9,17 +9,14 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 // Pay calculation constants (Philippine Labor Standards)
-define('DAILY_RATE_JT', 525);        // Junior Employee
-define('DAILY_RATE_SENIOR', 540);    // Senior Employee
+define('DAILY_RATE_JT', 525);
+define('DAILY_RATE_SENIOR', 540);
 define('STANDARD_HOURS', 8);
-define('NIGHT_DIFF_RATE', 0.10);     // 10% night differential (DOLE)
-define('OVERTIME_MULTIPLIER', 1.25); // 25% premium (DOLE)
-define('HOLIDAY_RATE', 2.0);         // 200% for regular holidays (DOLE)
-define('SPECIAL_HOLIDAY_RATE', 1.30); // 130% for special holidays (DOLE)
-
-// Night shift hours (10PM - 6AM as per DOLE)
-define('NIGHT_START', 22); // 10:00 PM
-define('NIGHT_END', 6);    // 6:00 AM
+define('NIGHT_DIFF_RATE', 0.10);
+define('OVERTIME_MULTIPLIER', 1.25);
+define('HOLIDAY_RATE', 2.0);
+define('NIGHT_START', 22);
+define('NIGHT_END', 6);
 
 try {
     switch ($method) {
@@ -94,7 +91,6 @@ try {
                     break;
                 }
                 
-                // Validate biweekly period (13-16 days)
                 $start = new DateTime($startDate);
                 $end = new DateTime($endDate);
                 $interval = $start->diff($end);
@@ -105,7 +101,6 @@ try {
                     break;
                 }
                 
-                // Get all active employees
                 $stmt = $db->query("SELECT * FROM employees WHERE status = 'Active'");
                 $employees = $stmt->fetchAll();
                 
@@ -113,7 +108,6 @@ try {
                 $errors = [];
                 
                 foreach ($employees as $emp) {
-                    // Check if payroll already exists
                     $stmt = $db->prepare("
                         SELECT * FROM payroll 
                         WHERE employee_id = ? AND pay_period_start = ? AND pay_period_end = ?
@@ -121,7 +115,6 @@ try {
                     $stmt->execute([$emp['employee_id'], $startDate, $endDate]);
                     
                     if ($stmt->rowCount() == 0) {
-                        // Calculate salary based on attendance
                         $salary = calculatePayrollPH($db, $emp, $startDate, $endDate);
                         
                         if ($salary['error']) {
@@ -174,188 +167,204 @@ try {
                     'details' => $generated,
                     'error_details' => $errors
                 ]);
+                
+            } elseif ($action === 'payslip-detail') {
+                $payrollId = $_GET['id'];
+                
+                if (!$payrollId) {
+                    jsonResponse(false, 'Payroll ID is required');
+                    break;
+                }
+                
+                $stmt = $db->prepare("
+                    SELECT p.*, e.name, e.position, e.department, e.employee_id
+                    FROM payroll p
+                    JOIN employees e ON p.employee_id = e.employee_id
+                    WHERE p.payroll_id = ?
+                ");
+                $stmt->execute([$payrollId]);
+                $payroll = $stmt->fetch();
+                
+                if (!$payroll) {
+                    jsonResponse(false, 'Payroll record not found');
+                    break;
+                }
+                
+                // Determine employee's daily rate based on position
+                $position = strtolower($payroll['position']);
+                $dailyRate = DAILY_RATE_SENIOR;
+                if (strpos($position, 'junior') !== false || 
+                    strpos($position, 'trainee') !== false || 
+                    strpos($position, 'apprentice') !== false) {
+                    $dailyRate = DAILY_RATE_JT;
+                }
+                $hourlyRate = $dailyRate / STANDARD_HOURS;
+                
+                // Get all dates in pay period
+                $start = new DateTime($payroll['pay_period_start']);
+                $end = new DateTime($payroll['pay_period_end']);
+                $end->modify('+1 day'); // Include end date
+                $period = new DatePeriod($start, new DateInterval('P1D'), $end);
+                
+                $allDates = [];
+                foreach ($period as $date) {
+                    $allDates[$date->format('Y-m-d')] = [
+                        'date' => $date->format('Y-m-d'),
+                        'day_name' => $date->format('l'),
+                        'time_in' => '-',
+                        'time_out' => '-',
+                        'status' => 'Absent',
+                        'hours_worked' => 0,
+                        'regular_hours' => 0,
+                        'overtime_hours' => 0,
+                        'night_hours' => 0,
+                        'shift_type' => 'Regular',
+                        'remarks' => ''
+                    ];
+                }
+                
+                // Get actual attendance records
+                $stmt = $db->prepare("
+                    SELECT 
+                        a.attendance_date,
+                        a.time_in,
+                        a.time_out,
+                        a.status,
+                        a.hours_worked,
+                        a.remarks
+                    FROM attendance_records a
+                    WHERE a.employee_id = ?
+                    AND a.attendance_date BETWEEN ? AND ?
+                    ORDER BY a.attendance_date ASC
+                ");
+                $stmt->execute([
+                    $payroll['employee_id'],
+                    $payroll['pay_period_start'],
+                    $payroll['pay_period_end']
+                ]);
+                $attendanceRecords = $stmt->fetchAll();
+                
+                $breakdown = [
+                    'total_days_worked' => 0,
+                    'total_regular_hours' => 0,
+                    'total_night_hours' => 0,
+                    'total_overtime_hours' => 0,
+                    'present_days' => 0,
+                    'late_days' => 0,
+                    'absent_days' => 0,
+                    'leave_days' => 0,
+                    'daily_records' => []
+                ];
+                
+                // Process attendance records
+                foreach ($attendanceRecords as $record) {
+                    $date = $record['attendance_date'];
+                    
+                    // Recalculate hours to ensure accuracy
+                    $hours = 0;
+                    $nightHours = 0;
+                    
+                    if ($record['time_in'] && $record['time_out']) {
+                        $hours = calculateHoursWorkedFixed(
+                            $date,
+                            $record['time_in'], 
+                            $record['time_out']
+                        );
+                        
+                        $nightHours = calculateNightHoursForPayslip(
+                            $date,
+                            $record['time_in'], 
+                            $record['time_out']
+                        );
+                    }
+                    
+                    // Calculate regular and overtime hours
+                    $regularHours = min($hours, STANDARD_HOURS);
+                    $overtimeHours = max(0, $hours - STANDARD_HOURS);
+                    
+                    // Determine shift type
+                    $shiftType = 'Regular';
+                    if ($record['time_in'] && $record['time_out']) {
+                        $timeInHour = (int)date('H', strtotime($record['time_in']));
+                        $timeOutHour = (int)date('H', strtotime($record['time_out']));
+                        
+                        // If time out hour is less than time in hour, it's overnight
+                        if ($timeOutHour < $timeInHour || 
+                            ($timeInHour >= 18 || $timeInHour < 6)) {
+                            $shiftType = 'Overnight';
+                        }
+                    }
+                    
+                    // Update status counts
+                    if ($record['status'] === 'Present') {
+                        $breakdown['present_days']++;
+                        $breakdown['total_days_worked']++;
+                    } elseif ($record['status'] === 'Late') {
+                        $breakdown['late_days']++;
+                        $breakdown['total_days_worked']++;
+                    } elseif ($record['status'] === 'On Leave') {
+                        $breakdown['leave_days']++;
+                    }
+                    
+                    $breakdown['total_regular_hours'] += $regularHours;
+                    $breakdown['total_night_hours'] += $nightHours;
+                    $breakdown['total_overtime_hours'] += $overtimeHours;
+                    
+                    // Update the all dates array with actual data
+                    if (isset($allDates[$date])) {
+                        $allDates[$date] = [
+                            'date' => $date,
+                            'day_name' => date('l', strtotime($date)),
+                            'time_in' => $record['time_in'] ?: '-',
+                            'time_out' => $record['time_out'] ?: '-',
+                            'status' => $record['status'],
+                            'hours_worked' => $hours,
+                            'regular_hours' => $regularHours,
+                            'overtime_hours' => $overtimeHours,
+                            'night_hours' => $nightHours,
+                            'shift_type' => $shiftType,
+                            'remarks' => $record['remarks']
+                        ];
+                    }
+                }
+                
+                // Count absent days (days with no attendance record)
+                foreach ($allDates as $dateData) {
+                    if ($dateData['status'] === 'Absent' && 
+                        $dateData['day_name'] !== 'Sunday') { // Don't count Sundays
+                        $breakdown['absent_days']++;
+                    }
+                }
+                
+                // Sort and assign to breakdown
+                ksort($allDates);
+                $breakdown['daily_records'] = array_values($allDates);
+                
+                // Calculate actual pay breakdown
+                $regularPay = $breakdown['total_regular_hours'] * $hourlyRate;
+                $nightDiffPay = $breakdown['total_night_hours'] * $hourlyRate * NIGHT_DIFF_RATE;
+                $overtimePay = $breakdown['total_overtime_hours'] * $hourlyRate * OVERTIME_MULTIPLIER;
+                
+                $result = [
+                    'payroll' => $payroll,
+                    'breakdown' => $breakdown,
+                    'hourly_rate' => $hourlyRate,
+                    'daily_rate' => $dailyRate,
+                    'pay_components' => [
+                        'regular_pay' => round($regularPay, 2),
+                        'night_diff_pay' => round($nightDiffPay, 2),
+                        'overtime_pay' => round($overtimePay, 2)
+                    ]
+                ];
+                
+                jsonResponse(true, 'Detailed payslip retrieved', $result);
             }
             break;
-// api/payroll.php - Add this new action for detailed payslip
-// Add this case in the GET method, after the 'generate' action
-
-if ($action === 'payslip-detail') {
-    $payrollId = $_GET['id'];
-    
-    if (!$payrollId) {
-        jsonResponse(false, 'Payroll ID is required');
-        break;
-    }
-    
-    try {
-        // Get payroll record
-        $stmt = $db->prepare("
-            SELECT p.*, e.name, e.position, e.department, e.employee_id
-            FROM payroll p
-            JOIN employees e ON p.employee_id = e.employee_id
-            WHERE p.payroll_id = ?
-        ");
-        $stmt->execute([$payrollId]);
-        $payroll = $stmt->fetch();
-        
-        if (!$payroll) {
-            jsonResponse(false, 'Payroll record not found');
-            break;
-        }
-        
-        // Get daily attendance breakdown for the pay period
-        $stmt = $db->prepare("
-            SELECT 
-                a.attendance_date,
-                a.time_in,
-                a.time_out,
-                a.status,
-                a.hours_worked,
-                a.remarks,
-                CASE 
-                    WHEN TIME(a.time_out) < TIME(a.time_in) THEN 'Overnight'
-                    ELSE 'Regular'
-                END as shift_type
-            FROM attendance_records a
-            WHERE a.employee_id = ?
-            AND a.attendance_date BETWEEN ? AND ?
-            ORDER BY a.attendance_date ASC
-        ");
-        $stmt->execute([
-            $payroll['employee_id'],
-            $payroll['pay_period_start'],
-            $payroll['pay_period_end']
-        ]);
-        $attendanceBreakdown = $stmt->fetchAll();
-        
-        // Calculate detailed breakdown
-        $dailyRate = 540; // Default senior rate
-        $hourlyRate = $dailyRate / 8;
-        
-        $breakdown = [
-            'total_days_worked' => 0,
-            'total_regular_hours' => 0,
-            'total_night_hours' => 0,
-            'total_overtime_hours' => 0,
-            'present_days' => 0,
-            'late_days' => 0,
-            'absent_days' => 0,
-            'leave_days' => 0,
-            'daily_records' => []
-        ];
-        
-        foreach ($attendanceBreakdown as $record) {
-            $hours = (float)$record['hours_worked'];
-            $nightHours = 0;
-            
-            // Calculate night differential hours
-            if ($record['time_in'] && $record['time_out']) {
-                $nightHours = calculateNightHoursForPayslip($record['time_in'], $record['time_out']);
-            }
-            
-            $regularHours = min($hours, 8);
-            $overtimeHours = max(0, $hours - 8);
-            
-            // Count by status
-            if ($record['status'] === 'Present') {
-                $breakdown['present_days']++;
-                $breakdown['total_days_worked']++;
-            } elseif ($record['status'] === 'Late') {
-                $breakdown['late_days']++;
-                $breakdown['total_days_worked']++;
-            } elseif ($record['status'] === 'Absent') {
-                $breakdown['absent_days']++;
-            } elseif ($record['status'] === 'On Leave') {
-                $breakdown['leave_days']++;
-            }
-            
-            $breakdown['total_regular_hours'] += $regularHours;
-            $breakdown['total_night_hours'] += $nightHours;
-            $breakdown['total_overtime_hours'] += $overtimeHours;
-            
-            // Add daily record
-            $breakdown['daily_records'][] = [
-                'date' => $record['attendance_date'],
-                'day_name' => date('l', strtotime($record['attendance_date'])),
-                'time_in' => $record['time_in'] ?: '-',
-                'time_out' => $record['time_out'] ?: '-',
-                'status' => $record['status'],
-                'hours_worked' => $hours,
-                'regular_hours' => $regularHours,
-                'overtime_hours' => $overtimeHours,
-                'night_hours' => $nightHours,
-                'shift_type' => $record['shift_type'] ?? 'Regular',
-                'remarks' => $record['remarks']
-            ];
-        }
-        
-        // Combine all data
-        $result = [
-            'payroll' => $payroll,
-            'breakdown' => $breakdown,
-            'hourly_rate' => $hourlyRate,
-            'daily_rate' => $dailyRate
-        ];
-        
-        jsonResponse(true, 'Detailed payslip retrieved', $result);
-        
-    } catch (PDOException $e) {
-        error_log($e->getMessage());
-        jsonResponse(false, 'Error retrieving payslip details: ' . $e->getMessage());
-    }
-}
-
-// Helper function for night hours calculation in payslip
-function calculateNightHoursForPayslip($timeIn, $timeOut) {
-    if (!$timeIn || !$timeOut) return 0;
-    
-    $timeInParts = explode(':', $timeIn);
-    $timeOutParts = explode(':', $timeOut);
-    
-    $startHour = (int)$timeInParts[0];
-    $startMin = (int)$timeInParts[1];
-    $endHour = (int)$timeOutParts[0];
-    $endMin = (int)$timeOutParts[1];
-    
-    $startDecimal = $startHour + ($startMin / 60);
-    $endDecimal = $endHour + ($endMin / 60);
-    
-    $nightHours = 0;
-    $nightStart = 22.0;  // 10:00 PM
-    $nightEnd = 6.0;     // 6:00 AM
-    
-    if ($endDecimal < $startDecimal) {
-        // Overnight shift
-        if ($startDecimal >= $nightStart) {
-            $nightHours += (24.0 - $startDecimal);
-        }
-        if ($endDecimal <= $nightEnd) {
-            $nightHours += $endDecimal;
-        } else {
-            $nightHours += $nightEnd;
-        }
-    } else {
-        // Same day shift
-        if ($endDecimal <= $nightEnd && $startDecimal < $nightEnd) {
-            $nightHours = $endDecimal - max($startDecimal, 0);
-        } elseif ($startDecimal >= $nightStart && $endDecimal <= 24.0) {
-            $nightHours = $endDecimal - $startDecimal;
-        } elseif ($startDecimal < $nightStart && $endDecimal > $nightStart) {
-            $nightHours = $endDecimal - $nightStart;
-        } elseif ($startDecimal < $nightEnd && $endDecimal > $nightEnd) {
-            $nightHours = $nightEnd - $startDecimal;
-        }
-    }
-    
-    return max(0, round($nightHours * 2) / 2);
-}
-
             
         case 'PUT':
             if ($action === 'update') {
                 $data = json_decode(file_get_contents('php://input'), true);
                 
-                // Recalculate with updated values
                 $overtimePay = $data['overtime_hours'] * $data['overtime_rate'];
                 $grossPay = $data['basic_salary'] + $overtimePay;
                 $totalDeductions = $data['late_deductions'] + $data['other_deductions'];
@@ -397,7 +406,6 @@ function calculateNightHoursForPayslip($timeIn, $timeOut) {
             $record = $stmt->fetch();
             
             if ($record) {
-                // Archive before delete
                 $stmt = $db->prepare("
                     INSERT INTO archives (archive_type, original_id, name_description, archived_data, archived_by)
                     VALUES ('payroll', ?, ?, ?, ?)
@@ -426,16 +434,10 @@ function calculateNightHoursForPayslip($timeIn, $timeOut) {
     jsonResponse(false, 'An error occurred: ' . $e->getMessage());
 }
 
-// ============================================
-// FIXED PHILIPPINE LABOR STANDARDS PAYROLL CALCULATION
-// ============================================
-
 function calculatePayrollPH($db, $employee, $startDate, $endDate) {
-    // Determine daily rate based on position/level
-    $dailyRate = DAILY_RATE_SENIOR; // Default
+    $dailyRate = DAILY_RATE_SENIOR;
     $position = strtolower($employee['position']);
     
-    // Check if Junior/Training level
     if (strpos($position, 'junior') !== false || 
         strpos($position, 'trainee') !== false || 
         strpos($position, 'apprentice') !== false) {
@@ -444,7 +446,6 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
     
     $hourlyRate = $dailyRate / STANDARD_HOURS;
     
-    // Get attendance records
     $stmt = $db->prepare("
         SELECT * FROM attendance_records 
         WHERE employee_id = ? 
@@ -461,25 +462,19 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
         ];
     }
     
-    // Get Philippine holidays for the period
     $holidays = getPhilippineHolidays($startDate, $endDate);
     
-    // Initialize counters
     $regularHours = 0;
     $nightDiffHours = 0;
-    $overtimeHours = 0; // Pending owner approval
+    $overtimeHours = 0;
     $holidayHours = 0;
     $lateMinutes = 0;
-    $presentDays = 0;
     
     foreach ($attendance as $record) {
         $date = $record['attendance_date'];
         $isHoliday = isset($holidays[$date]);
         
         if ($record['status'] === 'Present' || $record['status'] === 'Late') {
-            $presentDays++;
-            
-            // Calculate late deductions
             if ($record['status'] === 'Late' && $record['time_in']) {
                 $standardTime = strtotime('08:00:00');
                 $actualTime = strtotime($record['time_in']);
@@ -488,33 +483,22 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
                 }
             }
             
-            // ✅ FIXED: Calculate hours worked properly for overnight shifts
-            $hoursWorked = calculateHoursWorkedFixed($record['time_in'], $record['time_out'], $record['attendance_date']);
+            $hoursWorked = calculateHoursWorkedFixed($date, $record['time_in'], $record['time_out']);
             
             if ($hoursWorked > 0) {
-                // ✅ FIXED: Check for night differential (10PM - 6AM)
-                $nightHours = calculateNightDifferentialFixed(
-                    $date,
-                    $record['time_in'], 
-                    $record['time_out']
-                );
-                
+                $nightHours = calculateNightDifferentialFixed($date, $record['time_in'], $record['time_out']);
                 $nightDiffHours += $nightHours;
                 
                 if ($isHoliday) {
-                    // Holiday work - paid at holiday rate
                     $holidayHours += min($hoursWorked, STANDARD_HOURS);
-                    // Overtime on holidays goes to pending OT
                     if ($hoursWorked > STANDARD_HOURS) {
                         $overtimeHours += ($hoursWorked - STANDARD_HOURS);
                     }
                 } else {
-                    // Regular day
                     if ($hoursWorked <= STANDARD_HOURS) {
                         $regularHours += $hoursWorked;
                     } else {
                         $regularHours += STANDARD_HOURS;
-                        // OT pending owner approval
                         $overtimeHours += ($hoursWorked - STANDARD_HOURS);
                     }
                 }
@@ -522,24 +506,20 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
         }
     }
     
-    // Calculate pay components
     $regularPay = $regularHours * $hourlyRate;
     $nightDiffPay = $nightDiffHours * $hourlyRate * NIGHT_DIFF_RATE;
     $holidayPay = $holidayHours * $hourlyRate * HOLIDAY_RATE;
     $basicSalary = $regularPay + $nightDiffPay + $holidayPay;
     
-    // Overtime (pending approval - set to 0 initially)
     $overtimeRate = $hourlyRate * OVERTIME_MULTIPLIER;
-    $overtimePay = 0; // Owner must approve
+    $overtimePay = 0;
     
-    // Calculate deductions
     $lateDeduction = ($lateMinutes / 60) * $hourlyRate;
     
-    // Government deductions (SSS, PhilHealth, Pag-IBIG)
     $grossPay = $basicSalary + $overtimePay;
     $sss = calculateSSS($grossPay);
     $philHealth = calculatePhilHealth($grossPay);
-    $pagIbig = 100; // Standard Pag-IBIG contribution
+    $pagIbig = 100;
     
     $otherDeductions = $sss + $philHealth + $pagIbig;
     $totalDeductions = $lateDeduction + $otherDeductions;
@@ -559,14 +539,12 @@ function calculatePayrollPH($db, $employee, $startDate, $endDate) {
     ];
 }
 
-// ✅ FIXED: Properly handle overnight shifts
-function calculateHoursWorkedFixed($timeIn, $timeOut, $date) {
+function calculateHoursWorkedFixed($date, $timeIn, $timeOut) {
     if (!$timeIn || !$timeOut) return 0;
     
     $start = new DateTime($date . ' ' . $timeIn);
     $end = new DateTime($date . ' ' . $timeOut);
     
-    // Handle overnight shift - if time out is earlier than time in, add 1 day
     if ($end <= $start) {
         $end->modify('+1 day');
     }
@@ -574,17 +552,15 @@ function calculateHoursWorkedFixed($timeIn, $timeOut, $date) {
     $interval = $start->diff($end);
     $hours = $interval->h + ($interval->i / 60);
     
-    return max(0, round($hours * 2) / 2); // Round to nearest 0.5
+    return max(0, round($hours * 2) / 2);
 }
 
-// ✅ FIXED: Calculate night differential for overnight shifts
 function calculateNightDifferentialFixed($date, $timeIn, $timeOut) {
     if (!$timeIn || !$timeOut) return 0;
     
     $start = new DateTime($date . ' ' . $timeIn);
     $end = new DateTime($date . ' ' . $timeOut);
     
-    // Handle overnight shift
     if ($end <= $start) {
         $end->modify('+1 day');
     }
@@ -592,16 +568,13 @@ function calculateNightDifferentialFixed($date, $timeIn, $timeOut) {
     $nightHours = 0;
     $currentTime = clone $start;
     
-    // Check each hour of the shift
     while ($currentTime < $end) {
         $hour = (int)$currentTime->format('H');
         
-        // Night hours: 10 PM (22:00) to 6 AM (06:00)
         if ($hour >= NIGHT_START || $hour < NIGHT_END) {
             $nextHour = clone $currentTime;
             $nextHour->modify('+1 hour');
             
-            // Don't count beyond shift end
             if ($nextHour > $end) {
                 $minutes = ($end->getTimestamp() - $currentTime->getTimestamp()) / 60;
                 $nightHours += $minutes / 60;
@@ -613,13 +586,15 @@ function calculateNightDifferentialFixed($date, $timeIn, $timeOut) {
         $currentTime->modify('+1 hour');
     }
     
-    return max(0, round($nightHours * 2) / 2); // Round to nearest 0.5
+    return max(0, round($nightHours * 2) / 2);
+}
+
+function calculateNightHoursForPayslip($date, $timeIn, $timeOut) {
+    return calculateNightDifferentialFixed($date, $timeIn, $timeOut);
 }
 
 function getPhilippineHolidays($startDate, $endDate) {
-    // 2025 Philippine Regular Holidays (as per Proclamation)
     $holidays = [
-        // Regular Holidays (200% pay if worked)
         '2025-01-01' => 'New Year\'s Day',
         '2025-04-09' => 'Araw ng Kagitingan',
         '2025-04-17' => 'Maundy Thursday',
@@ -632,7 +607,6 @@ function getPhilippineHolidays($startDate, $endDate) {
         '2025-12-30' => 'Rizal Day',
     ];
     
-    // Filter holidays within date range
     $filtered = [];
     foreach ($holidays as $date => $name) {
         if ($date >= $startDate && $date <= $endDate) {
@@ -644,7 +618,6 @@ function getPhilippineHolidays($startDate, $endDate) {
 }
 
 function calculateSSS($grossPay) {
-    // 2024 SSS Contribution Table (Employee Share)
     if ($grossPay < 4250) return 180.00;
     if ($grossPay < 4750) return 202.50;
     if ($grossPay < 5250) return 225.00;
@@ -667,15 +640,14 @@ function calculateSSS($grossPay) {
     if ($grossPay < 13750) return 607.50;
     if ($grossPay < 14250) return 630.00;
     if ($grossPay < 14750) return 652.50;
-    return 900.00; // Maximum
+    return 900.00;
 }
 
 function calculatePhilHealth($grossPay) {
-    // 2024 PhilHealth (4% of basic salary, employee pays 2%)
-    $monthlyEquivalent = $grossPay * 2; // Biweekly to monthly
+    $monthlyEquivalent = $grossPay * 2;
     $monthlyEquivalent = max(10000, min($monthlyEquivalent, 100000));
     $contribution = $monthlyEquivalent * 0.04;
     $employeeShare = $contribution / 2;
-    return round($employeeShare / 2, 2); // Biweekly
+    return round($employeeShare / 2, 2);
 }
 ?>
