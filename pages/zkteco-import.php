@@ -1,5 +1,5 @@
 <?php
-// pages/zkteco-import.php - ZKTeco Data Import Interface
+// pages/zkteco-import.php - FIXED VERSION
 require_once '../config/config.php';
 requireLogin();
 
@@ -49,7 +49,7 @@ $user = getCurrentUser();
             font-size: 14px;
         }
 
-        .instructions-section {
+        .alert-box {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
             padding: 20px;
@@ -57,15 +57,48 @@ $user = getCurrentUser();
             margin-bottom: 20px;
         }
 
-        .instructions-section h3 {
+        .alert-box h3 {
             margin: 0 0 15px 0;
             color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-box .convert-steps {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .alert-box .convert-steps ol {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+
+        .alert-box .convert-steps li {
+            margin: 5px 0;
+            color: #856404;
+        }
+
+        .instructions-section {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .instructions-section h3 {
+            margin: 0 0 15px 0;
+            color: #1565c0;
         }
 
         .instructions-section ol {
             margin: 0;
             padding-left: 20px;
-            color: #856404;
+            color: #1976d2;
         }
 
         .instructions-section li {
@@ -78,12 +111,14 @@ $user = getCurrentUser();
             padding: 15px;
             border-radius: 5px;
             margin-top: 15px;
+            overflow-x: auto;
         }
 
         .format-example table {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
+            min-width: 600px;
         }
 
         .format-example th,
@@ -98,7 +133,6 @@ $user = getCurrentUser();
             font-weight: 600;
         }
 
-        /* Upload Area */
         .upload-area {
             position: relative;
             border: 3px dashed #ddd;
@@ -172,16 +206,11 @@ $user = getCurrentUser();
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
 
-        .btn-upload:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
         .btn-upload:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
 
-        /* Selected File Display */
         .selected-file {
             background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
             padding: 20px;
@@ -249,7 +278,6 @@ $user = getCurrentUser();
             transform: rotate(90deg);
         }
 
-        /* Progress Bar */
         .import-progress {
             display: none;
             margin: 20px 0;
@@ -275,10 +303,8 @@ $user = getCurrentUser();
             color: white;
             font-weight: bold;
             font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* Import Results */
         .import-result {
             display: none;
             padding: 20px;
@@ -303,48 +329,6 @@ $user = getCurrentUser();
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-
-        .import-result details {
-            margin: 15px 0;
-            padding: 15px;
-            background: white;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-
-        .import-result summary {
-            cursor: pointer;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            font-weight: 600;
-            user-select: none;
-        }
-
-        .import-result summary:hover {
-            background: #e9ecef;
-        }
-
-        .import-result ul {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0 0 0;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .import-result li {
-            padding: 8px 12px;
-            margin: 5px 0;
-            background: #f8f9fa;
-            border-left: 3px solid #dc3545;
-            border-radius: 3px;
-            font-size: 13px;
-        }
-
-        .import-result.success li {
-            border-left-color: #28a745;
         }
 
         .result-stats {
@@ -373,10 +357,8 @@ $user = getCurrentUser();
             margin: 8px 0 0 0;
             color: #666;
             font-size: 14px;
-            font-weight: 500;
         }
 
-        /* Statistics Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -402,6 +384,44 @@ $user = getCurrentUser();
             font-weight: bold;
             color: #222;
         }
+
+        details {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        summary {
+            cursor: pointer;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        summary:hover {
+            background: #e9ecef;
+        }
+
+        details ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        details li {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-left: 3px solid #dc3545;
+            border-radius: 3px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -416,6 +436,7 @@ $user = getCurrentUser();
                 <a href="employees.php" class="nav-item"><i class="fas fa-users"></i><span>Employees</span></a>
                 <a href="attendance.php" class="nav-item"><i class="fas fa-clock"></i><span>Attendance</span></a>
                 <a href="zkteco-import.php" class="nav-item active"><i class="fas fa-file-import"></i><span>ZKTeco Import</span></a>
+                <a href="zkteco-mapping.php" class="nav-item"><i class="fas fa-link"></i><span>ID Mapping</span></a>
                 <a href="payroll.php" class="nav-item"><i class="fas fa-money-bill-wave"></i><span>Payroll</span></a>
                 <a href="settings.php" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
             </div>
@@ -438,57 +459,105 @@ $user = getCurrentUser();
                     <div class="import-header">
                         <i class="fas fa-fingerprint"></i>
                         <h2>ZKTeco Attendance Import</h2>
-                        <p>Import attendance data exported from your ZKTeco device</p>
+                        <p>Import attendance data from your ZKTeco biometric device</p>
+                    </div>
+
+                    <div class="alert-box">
+                        <h3><i class="fas fa-exclamation-triangle"></i> CSV Files Only</h3>
+                        <p style="margin: 5px 0; color: #856404;">
+                            Excel support requires the PHP ZIP extension (currently not enabled). 
+                            Please use CSV format for now.
+                        </p>
+                        
+                        <div class="convert-steps">
+                            <strong>How to convert Excel to CSV:</strong>
+                            <ol>
+                                <li>Open your Excel file (.xlsx or .xls)</li>
+                                <li>Click <strong>File → Save As</strong></li>
+                                <li>Choose <strong>CSV (Comma delimited) (*.csv)</strong></li>
+                                <li>Click Save and use the CSV file here</li>
+                            </ol>
+                        </div>
                     </div>
 
                     <div class="instructions-section">
-                        <h3><i class="fas fa-info-circle"></i> How to Import</h3>
+                        <h3><i class="fas fa-info-circle"></i> Import Instructions</h3>
                         <ol>
-                            <li>Export attendance data from your ZKTeco device/software to CSV format</li>
-                            <li>Ensure the CSV file contains: Employee ID, Date, Time In, Time Out</li>
+                            <li>Export attendance data from your ZKTeco device/software as CSV</li>
+                            <li>Ensure CSV contains: Employee ID, Date, Time In, Time Out</li>
                             <li>Click the upload area below or drag and drop your CSV file</li>
-                            <li>Click "Validate File" to check for errors (optional but recommended)</li>
-                            <li>Click "Import Data" to process the file</li>
+                            <li>Click "Import Data" to process the attendance records</li>
                         </ol>
 
                         <div class="format-example">
-                            <strong>Expected CSV Format:</strong>
+                            <strong>✅ Your ZKTeco Transaction Report Format (Supported):</strong>
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Employee ID</th>
-                                        <th>Date</th>
-                                        <th>Time In</th>
-                                        <th>Time Out</th>
+                                        <th>Person ID</th>
+                                        <th>Person Name</th>
+                                        <th>Department</th>
+                                        <th>Punch Time</th>
+                                        <th>Device Name</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <td>EMP-001</td>
-                                        <td>2025-12-12</td>
-                                        <td>08:00</td>
-                                        <td>17:00</td>
+                                        <td>Juan Dela Cruz</td>
+                                        <td>Service</td>
+                                        <td>2025-12-12 08:00:00</td>
+                                        <td>Grande</td>
                                     </tr>
                                     <tr>
-                                        <td>EMP-002</td>
-                                        <td>2025-12-12</td>
-                                        <td>08:15</td>
-                                        <td>17:30</td>
+                                        <td>EMP-001</td>
+                                        <td>Juan Dela Cruz</td>
+                                        <td>Service</td>
+                                        <td>2025-12-12 17:00:00</td>
+                                        <td>Grande</td>
                                     </tr>
                                 </tbody>
                             </table>
+                            <p style="margin-top: 10px; font-size: 12px; color: #28a745;">
+                                <i class="fas fa-check-circle"></i> <strong>This is the format from your ZKTeco device.</strong> 
+                                The system will automatically group punches by date (first = Time In, last = Time Out).
+                            </p>
+                            
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: bold; color: #666; user-select: none;">
+                                    Alternative: Standard Format (also supported)
+                                </summary>
+                                <table style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee ID</th>
+                                            <th>Date</th>
+                                            <th>Time In</th>
+                                            <th>Time Out</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>EMP-001</td>
+                                            <td>2025-12-12</td>
+                                            <td>08:00</td>
+                                            <td>17:00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </details>
                         </div>
                     </div>
 
                     <div class="upload-area" id="uploadArea">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <h3>Drop CSV file here or click to browse</h3>
-                        <p>Supported formats: CSV (.csv), Excel (.xlsx, .xls)</p>
+                        <p>Only CSV (.csv) files are currently supported</p>
                         <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
                             <i class="fas fa-folder-open"></i>
-                            Choose File
+                            Choose CSV File
                         </button>
-                        <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+                        <input type="file" id="fileInput" class="file-input" accept=".csv">
                     </div>
 
                     <div class="selected-file" id="selectedFile">
@@ -504,12 +573,7 @@ $user = getCurrentUser();
                         </button>
                     </div>
 
-                    <!-- Import Buttons -->
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="btn-upload" id="validateBtn" style="display: none; background-color: #2196F3; flex: 1;">
-                            <i class="fas fa-check-circle"></i>
-                            Validate File
-                        </button>
                         <button class="btn-upload" id="importBtn" style="display: none; flex: 1;">
                             <i class="fas fa-file-import"></i>
                             Import Data
@@ -554,17 +618,11 @@ $user = getCurrentUser();
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
-    <!-- Load SheetJS for Excel file parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <script>
-        // ZKTeco Import Manager - Inline Version
+        // ===== COMPLETE IMPORT HANDLER - INLINE VERSION =====
         let selectedFile = null;
-        let validationErrors = [];
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ ZKTeco Import initialized');
             setupFileHandlers();
             loadStats();
         });
@@ -572,9 +630,7 @@ $user = getCurrentUser();
         function setupFileHandlers() {
             const uploadArea = document.getElementById('uploadArea');
             const fileInput = document.getElementById('fileInput');
-            const selectedFileDiv = document.getElementById('selectedFile');
 
-            // Drag and drop
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
@@ -587,50 +643,29 @@ $user = getCurrentUser();
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFileSelect(files[0]);
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileSelect(e.dataTransfer.files[0]);
                 }
             });
 
-            // File input change
             fileInput.addEventListener('change', (e) => {
-                console.log('File input changed');
                 if (e.target.files.length > 0) {
                     handleFileSelect(e.target.files[0]);
                 }
             });
 
-            // Remove file button
-            document.getElementById('removeFile').addEventListener('click', () => {
-                clearFileSelection();
-            });
-
-            // Validate button
-            document.getElementById('validateBtn').addEventListener('click', () => {
-                validateFile();
-            });
-
-            // Import button
-            document.getElementById('importBtn').addEventListener('click', () => {
-                processImport();
-            });
+            document.getElementById('removeFile').addEventListener('click', clearFileSelection);
+            document.getElementById('importBtn').addEventListener('click', processImport);
         }
 
         function handleFileSelect(file) {
-            console.log('File selected:', file.name, file.type);
-            
-            // Validate file type
-            const validExtensions = ['.csv', '.xlsx', '.xls'];
             const fileName = file.name.toLowerCase();
-            const isValid = validExtensions.some(ext => fileName.endsWith(ext));
-
-            if (!isValid) {
-                alert('Invalid file type. Please select a CSV or Excel file.');
+            
+            if (!fileName.endsWith('.csv')) {
+                alert('Please select a CSV file. Excel files are not supported yet.\n\nTo convert: Open Excel → File → Save As → CSV (Comma delimited)');
                 return;
             }
 
-            // Check file size (max 10MB)
             if (file.size > 10 * 1024 * 1024) {
                 alert('File is too large. Maximum size is 10MB.');
                 return;
@@ -638,76 +673,21 @@ $user = getCurrentUser();
 
             selectedFile = file;
             displaySelectedFile(file);
-            showImportControls();
+            document.getElementById('importBtn').style.display = 'inline-flex';
         }
 
         function displaySelectedFile(file) {
-            const selectedFileDiv = document.getElementById('selectedFile');
-            const fileName = document.getElementById('fileName');
-            const fileSize = document.getElementById('fileSize');
-
-            fileName.textContent = file.name;
-            fileSize.textContent = formatFileSize(file.size);
-            selectedFileDiv.classList.add('show');
-            
-            console.log('File displayed:', file.name);
-        }
-
-        function showImportControls() {
-            document.getElementById('validateBtn').style.display = 'inline-flex';
-            document.getElementById('importBtn').style.display = 'inline-flex';
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('selectedFile').classList.add('show');
         }
 
         function clearFileSelection() {
             selectedFile = null;
-            validationErrors = [];
-            
             document.getElementById('fileInput').value = '';
             document.getElementById('selectedFile').classList.remove('show');
-            document.getElementById('validateBtn').style.display = 'none';
             document.getElementById('importBtn').style.display = 'none';
-            
             hideResult();
-        }
-
-        async function validateFile() {
-            if (!selectedFile) {
-                alert('Please select a file first');
-                return;
-            }
-
-            showProgress('Validating file...', 0);
-
-            try {
-                // Read file content
-                const fileData = await readFileContent(selectedFile);
-                
-                // Parse based on file type
-                let rows;
-                if (fileData.isExcel) {
-                    rows = parseExcel(fileData.content);
-                } else {
-                    rows = parseCSV(fileData.content);
-                }
-                
-                updateProgress(50);
-
-                // Validate data
-                const validation = validateData(rows);
-                
-                updateProgress(100);
-
-                // Show validation results
-                setTimeout(() => {
-                    hideProgress();
-                    displayValidationResults(validation);
-                }, 500);
-
-            } catch (error) {
-                console.error('Validation error:', error);
-                hideProgress();
-                alert('Validation failed: ' + error.message);
-            }
         }
 
         async function processImport() {
@@ -724,7 +704,7 @@ $user = getCurrentUser();
             formData.append('excelFile', selectedFile);
 
             showProgress('Importing data...', 0);
-            disableImportButtons();
+            disableImportButton();
 
             try {
                 const progressInterval = startProgressAnimation();
@@ -735,6 +715,14 @@ $user = getCurrentUser();
                 });
 
                 clearInterval(progressInterval);
+
+                const contentType = response.headers.get('content-type');
+                
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned invalid response. Check browser console.');
+                }
 
                 if (!response.ok) {
                     throw new Error('HTTP error! status: ' + response.status);
@@ -749,191 +737,18 @@ $user = getCurrentUser();
                     
                     if (result.success) {
                         loadStats();
-                        setTimeout(() => clearFileSelection(), 5000);
+                        setTimeout(clearFileSelection, 5000);
                     }
 
-                    enableImportButtons();
+                    enableImportButton();
                 }, 500);
 
             } catch (error) {
                 console.error('Import error:', error);
                 hideProgress();
                 alert('Import failed: ' + error.message);
-                enableImportButtons();
+                enableImportButton();
             }
-        }
-
-        function readFileContent(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                const fileName = file.name.toLowerCase();
-                
-                reader.onload = (e) => {
-                    resolve({
-                        content: e.target.result,
-                        isExcel: fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
-                    });
-                };
-                
-                reader.onerror = () => {
-                    reject(new Error('Failed to read file'));
-                };
-                
-                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    reader.readAsText(file);
-                }
-            });
-        }
-
-        function parseCSV(content) {
-            const lines = content.split('\n').filter(line => line.trim());
-            
-            if (lines.length === 0) {
-                throw new Error('File is empty');
-            }
-
-            const header = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
-            const rows = [];
-            
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
-                
-                if (values.length === header.length) {
-                    const row = {};
-                    header.forEach((key, index) => {
-                        row[key] = values[index];
-                    });
-                    rows.push(row);
-                }
-            }
-
-            return rows;
-        }
-
-        function parseExcel(arrayBuffer) {
-            if (typeof XLSX === 'undefined') {
-                throw new Error('Excel library not loaded. Please refresh the page.');
-            }
-
-            try {
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                const data = XLSX.utils.sheet_to_json(worksheet, { 
-                    header: 1,
-                    defval: '',
-                    blankrows: false
-                });
-                
-                if (data.length === 0) {
-                    throw new Error('Excel file is empty');
-                }
-                
-                const header = data[0];
-                const rows = [];
-                
-                for (let i = 1; i < data.length; i++) {
-                    const row = {};
-                    header.forEach((key, index) => {
-                        row[key] = data[i][index] || '';
-                    });
-                    rows.push(row);
-                }
-                
-                return rows;
-            } catch (error) {
-                throw new Error('Failed to parse Excel file: ' + error.message);
-            }
-        }
-
-        function validateData(rows) {
-            const errors = [];
-            const warnings = [];
-            let validRows = 0;
-
-            if (rows.length === 0) {
-                errors.push('No data rows found in file');
-                return { valid: false, errors, warnings, validRows, totalRows: 0 };
-            }
-
-            rows.forEach((row, index) => {
-                const rowNum = index + 2;
-                let isValid = true;
-
-                const employeeId = row['Employee ID'] || row['employee_id'] || row['ID'] || '';
-                const date = row['Date'] || row['date'] || row['Attendance Date'] || '';
-                
-                if (!employeeId) {
-                    errors.push(`Row ${rowNum}: Missing Employee ID`);
-                    isValid = false;
-                }
-
-                if (!date) {
-                    errors.push(`Row ${rowNum}: Missing Date`);
-                    isValid = false;
-                }
-
-                if (isValid) validRows++;
-            });
-
-            return {
-                valid: errors.length === 0,
-                errors,
-                warnings,
-                validRows,
-                totalRows: rows.length
-            };
-        }
-
-        function displayValidationResults(validation) {
-            const resultDiv = document.getElementById('importResult');
-            resultDiv.className = validation.valid ? 'import-result success' : 'import-result error';
-            
-            let html = `
-                <h3>
-                    <i class="fas ${validation.valid ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> 
-                    Validation ${validation.valid ? 'Passed' : 'Failed'}
-                </h3>
-                <div class="result-stats">
-                    <div class="result-stat">
-                        <h4>${validation.totalRows}</h4>
-                        <p>Total Rows</p>
-                    </div>
-                    <div class="result-stat">
-                        <h4>${validation.validRows}</h4>
-                        <p>Valid Rows</p>
-                    </div>
-                    <div class="result-stat">
-                        <h4>${validation.errors.length}</h4>
-                        <p>Errors</p>
-                    </div>
-                </div>
-            `;
-
-            if (validation.errors.length > 0) {
-                html += `
-                    <details open style="margin-top: 15px;">
-                        <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">
-                            <i class="fas fa-exclamation-circle"></i> Errors (${validation.errors.length})
-                        </summary>
-                        <ul style="margin-top: 10px;">
-                            ${validation.errors.slice(0, 20).map(err => `<li>${escapeHtml(err)}</li>`).join('')}
-                        </ul>
-                    </details>
-                `;
-            }
-
-            if (validation.valid) {
-                html += `<p style="margin-top: 15px; color: #28a745;">
-                    <i class="fas fa-info-circle"></i> File is ready to import!
-                </p>`;
-            }
-
-            resultDiv.innerHTML = html;
-            resultDiv.style.display = 'block';
         }
 
         function displayImportResults(result) {
@@ -944,6 +759,7 @@ $user = getCurrentUser();
                 const data = result.data;
                 resultDiv.innerHTML = `
                     <h3><i class="fas fa-check-circle"></i> Import Completed Successfully!</h3>
+                    <p>Processed ${data.total_rows || 0} rows from your CSV file.</p>
                     <div class="result-stats">
                         <div class="result-stat">
                             <h4>${data.total_rows || 0}</h4>
@@ -963,9 +779,11 @@ $user = getCurrentUser();
                         </div>
                     </div>
                     ${data.errors && data.errors.length > 0 ? `
-                        <details style="margin-top: 15px;">
-                            <summary style="cursor: pointer; font-weight: bold;">View Errors (${data.errors.length})</summary>
-                            <ul style="margin-top: 10px;">
+                        <details>
+                            <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">
+                                <i class="fas fa-exclamation-circle"></i> View Errors (${data.errors.length})
+                            </summary>
+                            <ul>
                                 ${data.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('')}
                             </ul>
                         </details>
@@ -1030,22 +848,16 @@ $user = getCurrentUser();
             }, 200);
         }
 
-        function disableImportButtons() {
+        function disableImportButton() {
             const importBtn = document.getElementById('importBtn');
-            const validateBtn = document.getElementById('validateBtn');
-            
             importBtn.disabled = true;
             importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
-            validateBtn.disabled = true;
         }
 
-        function enableImportButtons() {
+        function enableImportButton() {
             const importBtn = document.getElementById('importBtn');
-            const validateBtn = document.getElementById('validateBtn');
-            
             importBtn.disabled = false;
             importBtn.innerHTML = '<i class="fas fa-file-import"></i> Import Data';
-            validateBtn.disabled = false;
         }
 
         function formatFileSize(bytes) {
@@ -1061,10 +873,7 @@ $user = getCurrentUser();
             div.textContent = text;
             return div.innerHTML;
         }
-    </script>
-    
-    <!-- Additional page-specific scripts -->
-    <script>
+
         // Sidebar toggle
         document.getElementById('sidebarToggle')?.addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('collapsed');
@@ -1077,6 +886,9 @@ $user = getCurrentUser();
                 window.location.href = '../logout.php';
             }
         });
+
+        // ===== LOG INITIALIZATION =====
+        console.log('✅ ZKTeco Import initialized - CSV only version');
     </script>
 </body>
 </html>

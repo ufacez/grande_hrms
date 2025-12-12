@@ -1,5 +1,8 @@
 <?php
-// api/zkteco-import.php - Import ZKTeco Excel/CSV Data with Full Excel Support
+// api/zkteco-import.php - FIXED FOR ZKTECO TRANSACTION REPORT FORMAT
+error_reporting(0);
+ini_set('display_errors', '0');
+
 require_once '../config/config.php';
 requireLogin();
 
@@ -11,7 +14,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     if ($method === 'POST') {
-        // Check if file was uploaded
         if (!isset($_FILES['excelFile']) || $_FILES['excelFile']['error'] !== UPLOAD_ERR_OK) {
             jsonResponse(false, 'No file uploaded or upload error occurred');
             exit;
@@ -20,28 +22,20 @@ try {
         $file = $_FILES['excelFile'];
         $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         
-        // Validate file type
-        if (!in_array($fileExt, ['xlsx', 'xls', 'csv'])) {
-            jsonResponse(false, 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed');
+        if ($fileExt !== 'csv') {
+            jsonResponse(false, 'Please upload CSV files only. To convert Excel: File → Save As → CSV (Comma delimited)');
             exit;
         }
 
-        // Read the file based on type
-        if ($fileExt === 'csv') {
-            $data = parseCSV($file['tmp_name']);
-        } else {
-            $data = parseExcelWithLibrary($file['tmp_name'], $fileExt);
-        }
+        $data = parseCSV($file['tmp_name']);
 
         if (empty($data)) {
-            jsonResponse(false, 'No data found in file');
+            jsonResponse(false, 'No data found in CSV file');
             exit;
         }
 
-        // Process and import the data
         $result = importZKTecoData($db, $data);
         
-        // Log the import
         logAudit($db, 'attendance', 'ZKTeco Data Import', 
             "Imported {$result['imported']} records. Updated: {$result['updated']}. Failed: {$result['failed']}", 
             'fa-file-import');
@@ -49,7 +43,6 @@ try {
         jsonResponse(true, 'Import completed', $result);
         
     } elseif ($method === 'GET') {
-        // Return import statistics
         $action = $_GET['action'] ?? '';
         
         if ($action === 'stats') {
@@ -76,179 +69,69 @@ try {
  */
 function parseCSV($filePath) {
     $data = [];
-    $handle = fopen($filePath, 'r');
     
+    $handle = fopen($filePath, 'r');
     if ($handle === false) {
-        return $data;
+        throw new Exception('Cannot open CSV file');
     }
     
     // Read header row
     $header = fgetcsv($handle);
     if (!$header) {
         fclose($handle);
-        return $data;
+        throw new Exception('CSV file is empty or has no header');
     }
     
-    // Clean header
+    // Clean header - remove BOM, quotes, whitespace
     $header = array_map(function($h) {
-        return trim($h, " \t\n\r\0\x0B\"'");
+        $h = trim($h);
+        $h = str_replace("\xEF\xBB\xBF", '', $h); // Remove UTF-8 BOM
+        $h = trim($h, " \t\n\r\0\x0B\"'");
+        return $h;
     }, $header);
     
     // Read data rows
+    $rowCount = 0;
     while (($row = fgetcsv($handle)) !== false) {
-        if (count($row) === count($header)) {
-            $rowData = array_combine($header, $row);
-            // Clean values
-            $rowData = array_map(function($v) {
-                return trim($v, " \t\n\r\0\x0B\"'");
-            }, $rowData);
+        $rowCount++;
+        
+        // Skip empty rows
+        if (empty(array_filter($row))) {
+            continue;
+        }
+        
+        // Ensure row has same number of columns as header
+        if (count($row) < count($header)) {
+            $row = array_pad($row, count($header), '');
+        } elseif (count($row) > count($header)) {
+            $row = array_slice($row, 0, count($header));
+        }
+        
+        // Combine with header
+        $rowData = array_combine($header, $row);
+        
+        // Clean values
+        $rowData = array_map(function($v) {
+            return trim($v, " \t\n\r\0\x0B\"'");
+        }, $rowData);
+        
+        // Skip rows with all empty values
+        if (!empty(array_filter($rowData))) {
             $data[] = $rowData;
         }
     }
     
     fclose($handle);
+    
+    if (empty($data)) {
+        throw new Exception("CSV file contains no valid data rows");
+    }
+    
     return $data;
 }
 
 /**
- * Parse Excel file - Direct to simple parser (no external libraries needed)
- */
-function parseExcelWithLibrary($filePath, $fileExt) {
-    return parseExcelSimple($filePath, $fileExt);
-}
-
-/**
- * Simple Excel parser
- */
-function parseExcelSimple($filePath, $fileExt) {
-    if ($fileExt === 'xlsx') {
-        return parseXLSXSimple($filePath);
-    } else {
-        throw new Exception('Old Excel format (.xls) not supported. Please save as .xlsx or .csv format and try again.');
-    }
-}
-
-/**
- * Parse XLSX file using ZIP and XML parsing
- */
-function parseXLSXSimple($filePath) {
-    $data = [];
-    
-    try {
-        if (!file_exists($filePath)) {
-            throw new Exception('Excel file not found');
-        }
-        
-        if (!class_exists('ZipArchive')) {
-            throw new Exception('ZipArchive extension not available. Please enable php_zip extension or use CSV format.');
-        }
-        
-        $zip = new ZipArchive();
-        if ($zip->open($filePath) !== TRUE) {
-            throw new Exception('Cannot open Excel file. File may be corrupted.');
-        }
-        
-        // Read shared strings
-        $sharedStrings = [];
-        if ($zip->locateName('xl/sharedStrings.xml') !== false) {
-            $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
-            if ($sharedStringsXml) {
-                $xml = @simplexml_load_string($sharedStringsXml);
-                if ($xml !== false) {
-                    foreach ($xml->si as $si) {
-                        $sharedStrings[] = (string)$si->t;
-                    }
-                }
-            }
-        }
-        
-        // Read worksheet
-        $worksheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if (!$worksheetXml) {
-            $zip->close();
-            throw new Exception('Cannot read worksheet from Excel file');
-        }
-        
-        $xml = @simplexml_load_string($worksheetXml);
-        if ($xml === false) {
-            $zip->close();
-            throw new Exception('Cannot parse Excel worksheet. File may be corrupted.');
-        }
-        
-        $rows = [];
-        
-        if (!isset($xml->sheetData) || !isset($xml->sheetData->row)) {
-            $zip->close();
-            throw new Exception('No data found in Excel worksheet');
-        }
-        
-        foreach ($xml->sheetData->row as $row) {
-            $rowData = [];
-            
-            foreach ($row->c as $cell) {
-                $value = '';
-                
-                if (isset($cell->v)) {
-                    $value = (string)$cell->v;
-                    
-                    if (isset($cell['t']) && (string)$cell['t'] === 's') {
-                        $index = (int)$value;
-                        $value = isset($sharedStrings[$index]) ? $sharedStrings[$index] : '';
-                    }
-                }
-                
-                $rowData[] = trim($value);
-            }
-            
-            if (!empty(array_filter($rowData))) {
-                $rows[] = $rowData;
-            }
-        }
-        
-        $zip->close();
-        
-        if (empty($rows)) {
-            throw new Exception('No data rows found in Excel file');
-        }
-        
-        // Convert to associative array
-        $header = array_shift($rows);
-        $header = array_map('trim', $header);
-        
-        if (empty(array_filter($header))) {
-            throw new Exception('Invalid header row in Excel file');
-        }
-        
-        $data = [];
-        
-        foreach ($rows as $row) {
-            $rowLength = count($row);
-            $headerLength = count($header);
-            
-            if ($rowLength < $headerLength) {
-                $row = array_pad($row, $headerLength, '');
-            } elseif ($rowLength > $headerLength) {
-                $row = array_slice($row, 0, $headerLength);
-            }
-            
-            $rowData = array_combine($header, $row);
-            $rowData = array_map('trim', $rowData);
-            
-            if (!empty(array_filter($rowData))) {
-                $data[] = $rowData;
-            }
-        }
-        
-        return $data;
-        
-    } catch (Exception $e) {
-        error_log('XLSX parser error: ' . $e->getMessage());
-        throw new Exception('Failed to parse Excel file: ' . $e->getMessage());
-    }
-}
-
-/**
- * Import ZKTeco data - Auto-detect format
+ * Import ZKTeco data with format detection
  */
 function importZKTecoData($db, $data) {
     if (empty($data)) {
@@ -257,17 +140,21 @@ function importZKTecoData($db, $data) {
             'imported' => 0,
             'updated' => 0,
             'failed' => 0,
-            'errors' => ['No data found']
+            'errors' => ['No data provided']
         ];
     }
     
-    // Detect format
+    // Detect format by checking column names
     $firstRow = $data[0];
     $columns = array_keys($firstRow);
     
+    // Check if it's ZKTeco Transaction Report format
     $isTransactionReport = false;
     foreach ($columns as $col) {
-        if (stripos($col, 'punc') !== false || stripos($col, 'person id') !== false) {
+        $colLower = strtolower($col);
+        if (strpos($colLower, 'person id') !== false || 
+            strpos($colLower, 'person name') !== false ||
+            strpos($colLower, 'punch time') !== false) {
             $isTransactionReport = true;
             break;
         }
@@ -281,12 +168,13 @@ function importZKTecoData($db, $data) {
 }
 
 /**
- * Import Transaction Report format
+ * Import ZKTeco Transaction Report format
+ * Columns: Person ID, Person Name, Department, Type, Source, Punch Time, Time Zone, Verification Mode, Mobile Punch, Device SN, Device Name, Upload Time
  */
 function importTransactionReport($db, $data) {
     $imported = 0;
-    $failed = 0;
     $updated = 0;
+    $failed = 0;
     $errors = [];
     $checkInRecords = [];
     
@@ -294,31 +182,15 @@ function importTransactionReport($db, $data) {
         try {
             $rowNum = $index + 2;
             
-            // Get Person ID
-            $personId = trim(
-                $row['Person ID'] ?? 
-                $row['person id'] ?? 
-                $row['PersonID'] ?? 
-                ''
-            );
+            // Get Person ID (exact column name from your export)
+            $personId = trim($row['Person ID'] ?? '');
             
-            // Get Person Name
-            $personName = trim(
-                $row['Person Name'] ?? 
-                $row['person name'] ?? 
-                $row['Name'] ?? 
-                ''
-            );
+            // Get Person Name (exact column name from your export)
+            $personName = trim($row['Person Name'] ?? '');
             
-            // Get Punch Time
-            $punchTime = trim(
-                $row['Punc-Time'] ?? 
-                $row['punc-time'] ?? 
-                $row['Punch Time'] ?? 
-                ''
-            );
+            // Get Punch Time (exact column name from your export)
+            $punchTime = trim($row['Punch Time'] ?? '');
             
-            // Validate
             if (empty($personId)) {
                 $failed++;
                 $errors[] = "Row $rowNum: Missing Person ID";
@@ -327,46 +199,43 @@ function importTransactionReport($db, $data) {
             
             if (empty($punchTime)) {
                 $failed++;
-                $errors[] = "Row $rowNum: Missing Punc-Time";
+                $errors[] = "Row $rowNum: Missing Punch Time";
                 continue;
             }
             
-            // Parse punch time
-            $dateTime = parsePunchTime($punchTime);
-            if (!$dateTime) {
+            // Parse punch time - ZKTeco format is typically "YYYY-MM-DD HH:MM:SS"
+            $timestamp = strtotime($punchTime);
+            if ($timestamp === false) {
                 $failed++;
-                $errors[] = "Row $rowNum: Invalid Punc-Time format: $punchTime";
+                $errors[] = "Row $rowNum: Invalid Punch Time format: $punchTime";
                 continue;
             }
             
-            $date = $dateTime['date'];
-            $time = $dateTime['time'];
+            $date = date('Y-m-d', $timestamp);
+            $time = date('H:i:s', $timestamp);
             
-            // Find employee
-            $stmt = $db->prepare("SELECT employee_id FROM employees WHERE employee_id = ?");
-            $stmt->execute([$personId]);
-            $result = $stmt->fetch();
+            // Find employee in system
+            $employeeId = findEmployeeId($db, $personId, $personName);
             
-            $employeeId = null;
-            
-            if ($result) {
-                $employeeId = $result['employee_id'];
-            } else {
-                // Try by name
-                $stmt = $db->prepare("SELECT employee_id FROM employees WHERE name LIKE ?");
-                $stmt->execute(["%$personName%"]);
-                $result = $stmt->fetch();
+            if (!$employeeId) {
+                // Try to find by partial name match
+                if (!empty($personName)) {
+                    $stmt = $db->prepare("SELECT employee_id FROM employees WHERE name LIKE ? AND status = 'Active' LIMIT 1");
+                    $stmt->execute(["%$personName%"]);
+                    $result = $stmt->fetch();
+                    if ($result) {
+                        $employeeId = $result['employee_id'];
+                    }
+                }
                 
-                if ($result) {
-                    $employeeId = $result['employee_id'];
-                } else {
+                if (!$employeeId) {
                     $failed++;
-                    $errors[] = "Row $rowNum: Employee not found - ID: $personId, Name: $personName";
+                    $errors[] = "Row $rowNum: Employee not found - Person ID: $personId, Name: $personName";
                     continue;
                 }
             }
             
-            // Store punch
+            // Group punches by employee and date
             $recordKey = $employeeId . '|' . $date;
             
             if (!isset($checkInRecords[$recordKey])) {
@@ -385,56 +254,69 @@ function importTransactionReport($db, $data) {
         }
     }
     
-    // Process records
+    // Process grouped punch records
     foreach ($checkInRecords as $record) {
         try {
             $employeeId = $record['employee_id'];
             $date = $record['date'];
             $punches = $record['punches'];
             
+            // Sort punches chronologically
             sort($punches);
             
+            // First punch = Time In, Last punch = Time Out
             $timeIn = $punches[0];
             $timeOut = count($punches) > 1 ? $punches[count($punches) - 1] : null;
             
+            // Determine status
             $status = determineStatus($timeIn, $timeOut);
             
+            // Calculate hours worked
             $hoursWorked = 0;
             if ($timeIn && $timeOut) {
-                $hoursWorked = calculateHoursWorked($date, $timeIn, $timeOut);
+                $hoursWorked = calculateHoursWorked($timeIn, $timeOut);
             }
             
-            // Check existing
+            // Check if record already exists
             $stmt = $db->prepare("
                 SELECT attendance_id FROM attendance_records 
                 WHERE employee_id = ? AND attendance_date = ?
             ");
             $stmt->execute([$employeeId, $date]);
-            $existing = $stmt->fetch();
             
-            if ($existing) {
+            if ($stmt->fetch()) {
+                // Update existing record
                 $stmt = $db->prepare("
                     UPDATE attendance_records 
                     SET time_in = ?, time_out = ?, status = ?, hours_worked = ?,
-                        remarks = 'Updated from ZKTeco Transaction Report',
+                        remarks = CONCAT('Updated from ZKTeco - ', ?, ' punches'),
                         updated_at = NOW()
                     WHERE employee_id = ? AND attendance_date = ?
                 ");
-                $stmt->execute([$timeIn, $timeOut, $status, $hoursWorked, $employeeId, $date]);
+                $stmt->execute([$timeIn, $timeOut, $status, $hoursWorked, count($punches), $employeeId, $date]);
                 $updated++;
             } else {
+                // Insert new record
                 $stmt = $db->prepare("
                     INSERT INTO attendance_records 
                     (employee_id, attendance_date, time_in, time_out, status, hours_worked, remarks)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Imported from ZKTeco Transaction Report')
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->execute([$employeeId, $date, $timeIn, $timeOut, $status, $hoursWorked]);
+                $stmt->execute([
+                    $employeeId, 
+                    $date, 
+                    $timeIn, 
+                    $timeOut, 
+                    $status, 
+                    $hoursWorked,
+                    'Imported from ZKTeco - ' . count($punches) . ' punches'
+                ]);
                 $imported++;
             }
             
         } catch (Exception $e) {
             $failed++;
-            $errors[] = "Processing error: " . $e->getMessage();
+            $errors[] = "Processing error for $employeeId on $date: " . $e->getMessage();
         }
     }
     
@@ -448,62 +330,22 @@ function importTransactionReport($db, $data) {
 }
 
 /**
- * Parse punch time
- */
-function parsePunchTime($punchTime) {
-    if (empty($punchTime)) return null;
-    
-    $punchTime = trim($punchTime);
-    
-    $formats = [
-        'Y-m-d H:i:s',
-        'Y-m-d H:i',
-        'd/m/Y H:i:s',
-        'd/m/Y H:i',
-        'm/d/Y H:i:s',
-        'm/d/Y H:i',
-        'Y/m/d H:i:s',
-        'Y/m/d H:i'
-    ];
-    
-    foreach ($formats as $format) {
-        $dt = DateTime::createFromFormat($format, $punchTime);
-        if ($dt !== false) {
-            return [
-                'date' => $dt->format('Y-m-d'),
-                'time' => $dt->format('H:i:s')
-            ];
-        }
-    }
-    
-    $timestamp = strtotime($punchTime);
-    if ($timestamp !== false) {
-        return [
-            'date' => date('Y-m-d', $timestamp),
-            'time' => date('H:i:s', $timestamp)
-        ];
-    }
-    
-    return null;
-}
-
-/**
- * Import standard format
+ * Import Standard format (Employee ID, Date, Time In, Time Out)
  */
 function importStandardFormat($db, $data) {
     $imported = 0;
-    $failed = 0;
     $updated = 0;
+    $failed = 0;
     $errors = [];
     
     foreach ($data as $index => $row) {
         try {
             $rowNum = $index + 2;
             
-            $employeeId = trim($row['Employee ID'] ?? $row['employee_id'] ?? '');
-            $date = trim($row['Date'] ?? $row['date'] ?? '');
-            $timeIn = trim($row['Time In'] ?? $row['time_in'] ?? '');
-            $timeOut = trim($row['Time Out'] ?? $row['time_out'] ?? '');
+            $employeeId = trim($row['Employee ID'] ?? $row['employee_id'] ?? $row['ID'] ?? '');
+            $date = trim($row['Date'] ?? $row['date'] ?? $row['Attendance Date'] ?? '');
+            $timeIn = trim($row['Time In'] ?? $row['time_in'] ?? $row['Check In'] ?? '');
+            $timeOut = trim($row['Time Out'] ?? $row['time_out'] ?? $row['Check Out'] ?? '');
             
             if (empty($employeeId) || empty($date)) {
                 $failed++;
@@ -511,23 +353,41 @@ function importStandardFormat($db, $data) {
                 continue;
             }
             
-            $formattedDate = formatDate($date);
-            if (!$formattedDate) {
+            // Parse date
+            $dateTimestamp = strtotime($date);
+            if ($dateTimestamp === false) {
                 $failed++;
                 $errors[] = "Row $rowNum: Invalid date format: $date";
                 continue;
             }
+            $formattedDate = date('Y-m-d', $dateTimestamp);
             
-            $formattedTimeIn = formatTime($timeIn);
-            $formattedTimeOut = formatTime($timeOut);
+            // Parse times
+            $formattedTimeIn = null;
+            $formattedTimeOut = null;
+            
+            if (!empty($timeIn)) {
+                $timeInTimestamp = strtotime($timeIn);
+                if ($timeInTimestamp !== false) {
+                    $formattedTimeIn = date('H:i:s', $timeInTimestamp);
+                }
+            }
+            
+            if (!empty($timeOut)) {
+                $timeOutTimestamp = strtotime($timeOut);
+                if ($timeOutTimestamp !== false) {
+                    $formattedTimeOut = date('H:i:s', $timeOutTimestamp);
+                }
+            }
             
             $status = determineStatus($formattedTimeIn, $formattedTimeOut);
             
             $hoursWorked = 0;
             if ($formattedTimeIn && $formattedTimeOut) {
-                $hoursWorked = calculateHoursWorked($formattedDate, $formattedTimeIn, $formattedTimeOut);
+                $hoursWorked = calculateHoursWorked($formattedTimeIn, $formattedTimeOut);
             }
             
+            // Check if employee exists
             $stmt = $db->prepare("SELECT employee_id FROM employees WHERE employee_id = ?");
             $stmt->execute([$employeeId]);
             if (!$stmt->fetch()) {
@@ -536,29 +396,31 @@ function importStandardFormat($db, $data) {
                 continue;
             }
             
+            // Check if record exists
             $stmt = $db->prepare("
                 SELECT attendance_id FROM attendance_records 
                 WHERE employee_id = ? AND attendance_date = ?
             ");
             $stmt->execute([$employeeId, $formattedDate]);
-            $existing = $stmt->fetch();
             
-            if ($existing) {
+            if ($stmt->fetch()) {
                 $stmt = $db->prepare("
                     UPDATE attendance_records 
                     SET time_in = ?, time_out = ?, status = ?, hours_worked = ?,
-                        remarks = 'Updated from ZKTeco import', updated_at = NOW()
+                        remarks = 'Updated from import', updated_at = NOW()
                     WHERE employee_id = ? AND attendance_date = ?
                 ");
-                $stmt->execute([$formattedTimeIn, $formattedTimeOut, $status, $hoursWorked, $employeeId, $formattedDate]);
+                $stmt->execute([$formattedTimeIn, $formattedTimeOut, $status, $hoursWorked, 
+                               $employeeId, $formattedDate]);
                 $updated++;
             } else {
                 $stmt = $db->prepare("
                     INSERT INTO attendance_records 
                     (employee_id, attendance_date, time_in, time_out, status, hours_worked, remarks)
-                    VALUES (?, ?, ?, ?, ?, ?, 'Imported from ZKTeco')
+                    VALUES (?, ?, ?, ?, ?, ?, 'Imported from CSV')
                 ");
-                $stmt->execute([$employeeId, $formattedDate, $formattedTimeIn, $formattedTimeOut, $status, $hoursWorked]);
+                $stmt->execute([$employeeId, $formattedDate, $formattedTimeIn, $formattedTimeOut, 
+                               $status, $hoursWorked]);
                 $imported++;
             }
             
@@ -578,91 +440,91 @@ function importStandardFormat($db, $data) {
 }
 
 /**
- * Format date
+ * Find employee ID by ZKTeco Person ID or name
  */
-function formatDate($dateStr) {
-    if (empty($dateStr)) return null;
-    
-    $formats = ['Y-m-d', 'd/m/Y', 'm/d/Y', 'Y/m/d'];
-    
-    foreach ($formats as $format) {
-        $date = DateTime::createFromFormat($format, $dateStr);
-        if ($date !== false) {
-            return $date->format('Y-m-d');
-        }
+function findEmployeeId($db, $personId, $personName) {
+    // 1. Try ZKTeco mapping table first
+    $stmt = $db->prepare("SELECT employee_id FROM zkteco_mapping WHERE zkteco_id = ?");
+    $stmt->execute([$personId]);
+    $result = $stmt->fetch();
+    if ($result) {
+        return $result['employee_id'];
     }
     
-    $timestamp = strtotime($dateStr);
-    if ($timestamp !== false) {
-        return date('Y-m-d', $timestamp);
+    // 2. Try direct employee ID match
+    $stmt = $db->prepare("SELECT employee_id FROM employees WHERE employee_id = ? AND status = 'Active'");
+    $stmt->execute([$personId]);
+    $result = $stmt->fetch();
+    if ($result) {
+        return $result['employee_id'];
+    }
+    
+    // 3. Try exact name match
+    if (!empty($personName)) {
+        $stmt = $db->prepare("SELECT employee_id FROM employees WHERE name = ? AND status = 'Active'");
+        $stmt->execute([$personName]);
+        $result = $stmt->fetch();
+        if ($result) {
+            return $result['employee_id'];
+        }
     }
     
     return null;
 }
 
 /**
- * Format time
- */
-function formatTime($timeStr) {
-    if (empty($timeStr)) return null;
-    
-    if (strpos($timeStr, ' ') !== false) {
-        $parts = explode(' ', $timeStr);
-        $timeStr = end($parts);
-    }
-    
-    $formats = ['H:i:s', 'H:i', 'h:i:s A', 'h:i A'];
-    
-    foreach ($formats as $format) {
-        $time = DateTime::createFromFormat($format, $timeStr);
-        if ($time !== false) {
-            return $time->format('H:i:s');
-        }
-    }
-    
-    $timestamp = strtotime($timeStr);
-    if ($timestamp !== false) {
-        return date('H:i:s', $timestamp);
-    }
-    
-    return null;
-}
-
-/**
- * Determine status
+ * Determine attendance status based on time in
  */
 function determineStatus($timeIn, $timeOut) {
     if (!$timeIn) {
         return 'Absent';
     }
     
+    // Consider on-time if checked in by 8:00 AM
     if ($timeIn <= '08:00:00') {
         return 'Present';
-    } elseif ($timeIn <= '08:15:00') {
+    } 
+    // Grace period until 8:15 AM
+    elseif ($timeIn <= '08:15:00') {
         return 'Late';
-    } else {
+    } 
+    else {
         return 'Late';
     }
 }
 
 /**
- * Calculate hours worked
+ * Calculate hours worked (handles overnight shifts)
  */
-function calculateHoursWorked($date, $timeIn, $timeOut) {
+function calculateHoursWorked($timeIn, $timeOut) {
     if (!$timeIn || !$timeOut) {
         return 0;
     }
     
-    $start = new DateTime("$date $timeIn");
-    $end = new DateTime("$date $timeOut");
+    // Parse time strings
+    $timeInParts = explode(':', $timeIn);
+    $timeOutParts = explode(':', $timeOut);
     
-    if ($end <= $start) {
-        $end->modify('+1 day');
+    $startHour = (int)$timeInParts[0];
+    $startMin = (int)($timeInParts[1] ?? 0);
+    $endHour = (int)$timeOutParts[0];
+    $endMin = (int)($timeOutParts[1] ?? 0);
+    
+    // Convert to decimal hours
+    $startDecimal = $startHour + ($startMin / 60);
+    $endDecimal = $endHour + ($endMin / 60);
+    
+    // Calculate hours
+    $hours = 0;
+    
+    // Handle overnight shifts
+    if ($endDecimal < $startDecimal) {
+        $hours = (24 - $startDecimal) + $endDecimal;
+    } else {
+        $hours = $endDecimal - $startDecimal;
     }
     
-    $interval = $start->diff($end);
-    $hours = $interval->h + ($interval->i / 60);
-    
+    // Round to nearest 0.5 hour
     return max(0, round($hours * 2) / 2);
 }
 ?>
