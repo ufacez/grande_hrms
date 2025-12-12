@@ -49,164 +49,6 @@ $user = getCurrentUser();
             font-size: 14px;
         }
 
-        .upload-area {
-            border: 3px dashed #ddd;
-            border-radius: 8px;
-            padding: 50px 30px;
-            text-align: center;
-            background: #fafafa;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-
-        .upload-area:hover {
-            border-color: #4CAF50;
-            background: #f0f8f0;
-        }
-
-        .upload-area.dragover {
-            border-color: #4CAF50;
-            background: #e8f5e9;
-        }
-
-        .upload-area i {
-            font-size: 48px;
-            color: #999;
-            margin-bottom: 15px;
-        }
-
-        .upload-area p {
-            margin: 10px 0;
-            color: #666;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .btn-upload {
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .btn-upload:hover {
-            background-color: #45a049;
-        }
-
-        .selected-file {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .selected-file.show {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .file-info i {
-            font-size: 32px;
-            color: #4CAF50;
-        }
-
-        .remove-file {
-            background: none;
-            border: none;
-            color: #dc3545;
-            cursor: pointer;
-            padding: 5px 10px;
-            font-size: 16px;
-        }
-
-        .import-progress {
-            display: none;
-            margin: 20px 0;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 30px;
-            background: #f0f0f0;
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #66BB6A);
-            width: 0%;
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .import-result {
-            display: none;
-            padding: 20px;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-
-        .import-result.success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-
-        .import-result.error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .result-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .result-stat {
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        .result-stat h4 {
-            font-size: 32px;
-            margin: 0;
-            color: #222;
-        }
-
-        .result-stat p {
-            margin: 5px 0 0 0;
-            color: #666;
-            font-size: 14px;
-        }
-
         .instructions-section {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -256,6 +98,285 @@ $user = getCurrentUser();
             font-weight: 600;
         }
 
+        /* Upload Area */
+        .upload-area {
+            position: relative;
+            border: 3px dashed #ddd;
+            border-radius: 12px;
+            padding: 50px 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #f0f8f0 0%, #e8f5e9 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.1);
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-style: solid;
+            transform: scale(1.02);
+        }
+
+        .upload-area i {
+            font-size: 56px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-area:hover i {
+            transform: scale(1.1);
+        }
+
+        .upload-area h3 {
+            margin: 10px 0;
+            color: #222;
+            font-size: 20px;
+        }
+
+        .upload-area p {
+            margin: 10px 0 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn-upload {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-upload:hover:not(:disabled) {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-upload:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-upload:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Selected File Display */
+        .selected-file {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+        }
+
+        .selected-file.show {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-info i {
+            font-size: 40px;
+            color: #4CAF50;
+        }
+
+        .file-info strong {
+            display: block;
+            color: #222;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .remove-file {
+            background: #dc3545;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 50%;
+            font-size: 16px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .remove-file:hover {
+            background: #c82333;
+            transform: rotate(90deg);
+        }
+
+        /* Progress Bar */
+        .import-progress {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #66BB6A);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Import Results */
+        .import-result {
+            display: none;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .import-result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .import-result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .import-result h3 {
+            margin: 0 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .import-result details {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .import-result summary {
+            cursor: pointer;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .import-result summary:hover {
+            background: #e9ecef;
+        }
+
+        .import-result ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .import-result li {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-left: 3px solid #dc3545;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .import-result.success li {
+            border-left-color: #28a745;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .result-stat {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .result-stat h4 {
+            font-size: 36px;
+            margin: 0;
+            color: #222;
+            font-weight: bold;
+        }
+
+        .result-stat p {
+            margin: 8px 0 0 0;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Statistics Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -326,6 +447,7 @@ $user = getCurrentUser();
                             <li>Export attendance data from your ZKTeco device/software to CSV format</li>
                             <li>Ensure the CSV file contains: Employee ID, Date, Time In, Time Out</li>
                             <li>Click the upload area below or drag and drop your CSV file</li>
+                            <li>Click "Validate File" to check for errors (optional but recommended)</li>
                             <li>Click "Import Data" to process the file</li>
                         </ol>
 
@@ -361,7 +483,7 @@ $user = getCurrentUser();
                     <div class="upload-area" id="uploadArea">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <h3>Drop CSV file here or click to browse</h3>
-                        <p>Supported formats: CSV (.csv)</p>
+                        <p>Supported formats: CSV (.csv), Excel (.xlsx, .xls)</p>
                         <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
                             <i class="fas fa-folder-open"></i>
                             Choose File
@@ -382,10 +504,17 @@ $user = getCurrentUser();
                         </button>
                     </div>
 
-                    <button class="btn-upload" id="importBtn" style="width: 100%; display: none;">
-                        <i class="fas fa-file-import"></i>
-                        Import Data
-                    </button>
+                    <!-- Import Buttons -->
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn-upload" id="validateBtn" style="display: none; background-color: #2196F3; flex: 1;">
+                            <i class="fas fa-check-circle"></i>
+                            Validate File
+                        </button>
+                        <button class="btn-upload" id="importBtn" style="display: none; flex: 1;">
+                            <i class="fas fa-file-import"></i>
+                            Import Data
+                        </button>
+                    </div>
 
                     <div class="import-progress" id="importProgress">
                         <div class="progress-bar">
@@ -425,142 +554,389 @@ $user = getCurrentUser();
         <i class="fas fa-sign-out-alt"></i>
     </button>
 
+    <!-- Load SheetJS for Excel file parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script>
+        // ZKTeco Import Manager - Inline Version
         let selectedFile = null;
+        let validationErrors = [];
 
-        // Sidebar toggle
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('collapsed');
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ ZKTeco Import initialized');
+            setupFileHandlers();
+            loadStats();
         });
 
-        // File input handling
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const selectedFileDiv = document.getElementById('selectedFile');
-        const importBtn = document.getElementById('importBtn');
+        function setupFileHandlers() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const selectedFileDiv = document.getElementById('selectedFile');
 
-        // Drag and drop
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
 
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelect(files[0]);
-            }
-        });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
 
-        // File input change
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
-            }
-        });
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                console.log('File input changed');
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
 
-        // Remove file
-        document.getElementById('removeFile').addEventListener('click', () => {
-            selectedFile = null;
-            fileInput.value = '';
-            selectedFileDiv.classList.remove('show');
-            importBtn.style.display = 'none';
-        });
+            // Remove file button
+            document.getElementById('removeFile').addEventListener('click', () => {
+                clearFileSelection();
+            });
 
-        // Handle file selection
+            // Validate button
+            document.getElementById('validateBtn').addEventListener('click', () => {
+                validateFile();
+            });
+
+            // Import button
+            document.getElementById('importBtn').addEventListener('click', () => {
+                processImport();
+            });
+        }
+
         function handleFileSelect(file) {
-            const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+            console.log('File selected:', file.name, file.type);
             
-            if (!validTypes.includes(file.type) && !file.name.endsWith('.csv')) {
-                alert('Please select a valid CSV file');
+            // Validate file type
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            const fileName = file.name.toLowerCase();
+            const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+
+            if (!isValid) {
+                alert('Invalid file type. Please select a CSV or Excel file.');
+                return;
+            }
+
+            // Check file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File is too large. Maximum size is 10MB.');
                 return;
             }
 
             selectedFile = file;
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            displaySelectedFile(file);
+            showImportControls();
+        }
+
+        function displaySelectedFile(file) {
+            const selectedFileDiv = document.getElementById('selectedFile');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
             selectedFileDiv.classList.add('show');
-            importBtn.style.display = 'block';
+            
+            console.log('File displayed:', file.name);
         }
 
-        // Format file size
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        function showImportControls() {
+            document.getElementById('validateBtn').style.display = 'inline-flex';
+            document.getElementById('importBtn').style.display = 'inline-flex';
         }
 
-        // Import button
-        document.getElementById('importBtn').addEventListener('click', async () => {
+        function clearFileSelection() {
+            selectedFile = null;
+            validationErrors = [];
+            
+            document.getElementById('fileInput').value = '';
+            document.getElementById('selectedFile').classList.remove('show');
+            document.getElementById('validateBtn').style.display = 'none';
+            document.getElementById('importBtn').style.display = 'none';
+            
+            hideResult();
+        }
+
+        async function validateFile() {
             if (!selectedFile) {
                 alert('Please select a file first');
+                return;
+            }
+
+            showProgress('Validating file...', 0);
+
+            try {
+                // Read file content
+                const fileData = await readFileContent(selectedFile);
+                
+                // Parse based on file type
+                let rows;
+                if (fileData.isExcel) {
+                    rows = parseExcel(fileData.content);
+                } else {
+                    rows = parseCSV(fileData.content);
+                }
+                
+                updateProgress(50);
+
+                // Validate data
+                const validation = validateData(rows);
+                
+                updateProgress(100);
+
+                // Show validation results
+                setTimeout(() => {
+                    hideProgress();
+                    displayValidationResults(validation);
+                }, 500);
+
+            } catch (error) {
+                console.error('Validation error:', error);
+                hideProgress();
+                alert('Validation failed: ' + error.message);
+            }
+        }
+
+        async function processImport() {
+            if (!selectedFile) {
+                alert('Please select a file first');
+                return;
+            }
+
+            if (!confirm('Import this file? This will add or update attendance records.')) {
                 return;
             }
 
             const formData = new FormData();
             formData.append('excelFile', selectedFile);
 
-            const progressDiv = document.getElementById('importProgress');
-            const progressFill = document.getElementById('progressFill');
-            const resultDiv = document.getElementById('importResult');
-
-            progressDiv.style.display = 'block';
-            resultDiv.style.display = 'none';
-            importBtn.disabled = true;
-
-            // Simulate progress
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 10;
-                if (progress <= 90) {
-                    progressFill.style.width = progress + '%';
-                    progressFill.textContent = progress + '%';
-                }
-            }, 200);
+            showProgress('Importing data...', 0);
+            disableImportButtons();
 
             try {
+                const progressInterval = startProgressAnimation();
+
                 const response = await fetch('../api/zkteco-import.php', {
                     method: 'POST',
                     body: formData
                 });
 
-                const result = await response.json();
-
                 clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                progressFill.textContent = '100%';
+
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+
+                const result = await response.json();
+                updateProgress(100);
 
                 setTimeout(() => {
-                    progressDiv.style.display = 'none';
-                    showResult(result);
+                    hideProgress();
+                    displayImportResults(result);
+                    
                     if (result.success) {
                         loadStats();
+                        setTimeout(() => clearFileSelection(), 5000);
                     }
-                    importBtn.disabled = false;
+
+                    enableImportButtons();
                 }, 500);
 
             } catch (error) {
-                clearInterval(progressInterval);
-                progressDiv.style.display = 'none';
-                showResult({
-                    success: false,
-                    message: 'Import failed: ' + error.message
-                });
-                importBtn.disabled = false;
+                console.error('Import error:', error);
+                hideProgress();
+                alert('Import failed: ' + error.message);
+                enableImportButtons();
             }
-        });
+        }
 
-        // Show import result
-        function showResult(result) {
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                const fileName = file.name.toLowerCase();
+                
+                reader.onload = (e) => {
+                    resolve({
+                        content: e.target.result,
+                        isExcel: fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
+                    });
+                };
+                
+                reader.onerror = () => {
+                    reject(new Error('Failed to read file'));
+                };
+                
+                if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        function parseCSV(content) {
+            const lines = content.split('\n').filter(line => line.trim());
+            
+            if (lines.length === 0) {
+                throw new Error('File is empty');
+            }
+
+            const header = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
+            const rows = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+                
+                if (values.length === header.length) {
+                    const row = {};
+                    header.forEach((key, index) => {
+                        row[key] = values[index];
+                    });
+                    rows.push(row);
+                }
+            }
+
+            return rows;
+        }
+
+        function parseExcel(arrayBuffer) {
+            if (typeof XLSX === 'undefined') {
+                throw new Error('Excel library not loaded. Please refresh the page.');
+            }
+
+            try {
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const data = XLSX.utils.sheet_to_json(worksheet, { 
+                    header: 1,
+                    defval: '',
+                    blankrows: false
+                });
+                
+                if (data.length === 0) {
+                    throw new Error('Excel file is empty');
+                }
+                
+                const header = data[0];
+                const rows = [];
+                
+                for (let i = 1; i < data.length; i++) {
+                    const row = {};
+                    header.forEach((key, index) => {
+                        row[key] = data[i][index] || '';
+                    });
+                    rows.push(row);
+                }
+                
+                return rows;
+            } catch (error) {
+                throw new Error('Failed to parse Excel file: ' + error.message);
+            }
+        }
+
+        function validateData(rows) {
+            const errors = [];
+            const warnings = [];
+            let validRows = 0;
+
+            if (rows.length === 0) {
+                errors.push('No data rows found in file');
+                return { valid: false, errors, warnings, validRows, totalRows: 0 };
+            }
+
+            rows.forEach((row, index) => {
+                const rowNum = index + 2;
+                let isValid = true;
+
+                const employeeId = row['Employee ID'] || row['employee_id'] || row['ID'] || '';
+                const date = row['Date'] || row['date'] || row['Attendance Date'] || '';
+                
+                if (!employeeId) {
+                    errors.push(`Row ${rowNum}: Missing Employee ID`);
+                    isValid = false;
+                }
+
+                if (!date) {
+                    errors.push(`Row ${rowNum}: Missing Date`);
+                    isValid = false;
+                }
+
+                if (isValid) validRows++;
+            });
+
+            return {
+                valid: errors.length === 0,
+                errors,
+                warnings,
+                validRows,
+                totalRows: rows.length
+            };
+        }
+
+        function displayValidationResults(validation) {
+            const resultDiv = document.getElementById('importResult');
+            resultDiv.className = validation.valid ? 'import-result success' : 'import-result error';
+            
+            let html = `
+                <h3>
+                    <i class="fas ${validation.valid ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> 
+                    Validation ${validation.valid ? 'Passed' : 'Failed'}
+                </h3>
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <h4>${validation.totalRows}</h4>
+                        <p>Total Rows</p>
+                    </div>
+                    <div class="result-stat">
+                        <h4>${validation.validRows}</h4>
+                        <p>Valid Rows</p>
+                    </div>
+                    <div class="result-stat">
+                        <h4>${validation.errors.length}</h4>
+                        <p>Errors</p>
+                    </div>
+                </div>
+            `;
+
+            if (validation.errors.length > 0) {
+                html += `
+                    <details open style="margin-top: 15px;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">
+                            <i class="fas fa-exclamation-circle"></i> Errors (${validation.errors.length})
+                        </summary>
+                        <ul style="margin-top: 10px;">
+                            ${validation.errors.slice(0, 20).map(err => `<li>${escapeHtml(err)}</li>`).join('')}
+                        </ul>
+                    </details>
+                `;
+            }
+
+            if (validation.valid) {
+                html += `<p style="margin-top: 15px; color: #28a745;">
+                    <i class="fas fa-info-circle"></i> File is ready to import!
+                </p>`;
+            }
+
+            resultDiv.innerHTML = html;
+            resultDiv.style.display = 'block';
+        }
+
+        function displayImportResults(result) {
             const resultDiv = document.getElementById('importResult');
             resultDiv.className = 'import-result ' + (result.success ? 'success' : 'error');
             
@@ -570,19 +946,19 @@ $user = getCurrentUser();
                     <h3><i class="fas fa-check-circle"></i> Import Completed Successfully!</h3>
                     <div class="result-stats">
                         <div class="result-stat">
-                            <h4>${data.total_rows}</h4>
+                            <h4>${data.total_rows || 0}</h4>
                             <p>Total Rows</p>
                         </div>
-                        <div class="result-stat">
-                            <h4>${data.imported}</h4>
+                        <div class="result-stat" style="background: #d4edda;">
+                            <h4>${data.imported || 0}</h4>
                             <p>New Records</p>
                         </div>
-                        <div class="result-stat">
-                            <h4>${data.updated}</h4>
+                        <div class="result-stat" style="background: #fff3cd;">
+                            <h4>${data.updated || 0}</h4>
                             <p>Updated</p>
                         </div>
-                        <div class="result-stat">
-                            <h4>${data.failed}</h4>
+                        <div class="result-stat" style="background: #f8d7da;">
+                            <h4>${data.failed || 0}</h4>
                             <p>Failed</p>
                         </div>
                     </div>
@@ -590,7 +966,7 @@ $user = getCurrentUser();
                         <details style="margin-top: 15px;">
                             <summary style="cursor: pointer; font-weight: bold;">View Errors (${data.errors.length})</summary>
                             <ul style="margin-top: 10px;">
-                                ${data.errors.map(err => `<li>${err}</li>`).join('')}
+                                ${data.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('')}
                             </ul>
                         </details>
                     ` : ''}
@@ -598,20 +974,19 @@ $user = getCurrentUser();
             } else {
                 resultDiv.innerHTML = `
                     <h3><i class="fas fa-exclamation-circle"></i> Import Failed</h3>
-                    <p>${result.message}</p>
+                    <p>${escapeHtml(result.message || 'An error occurred')}</p>
                 `;
             }
             
             resultDiv.style.display = 'block';
         }
 
-        // Load statistics
         async function loadStats() {
             try {
                 const response = await fetch('../api/zkteco-import.php?action=stats');
                 const result = await response.json();
                 
-                if (result.success) {
+                if (result.success && result.data) {
                     const data = result.data;
                     document.getElementById('totalRecords').textContent = data.total_records || 0;
                     document.getElementById('uniqueEmployees').textContent = data.unique_employees || 0;
@@ -625,15 +1000,83 @@ $user = getCurrentUser();
             }
         }
 
+        function showProgress(message, percent) {
+            document.getElementById('importProgress').style.display = 'block';
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressFill').textContent = message;
+        }
+
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = Math.round(percent) + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('importProgress').style.display = 'none';
+        }
+
+        function hideResult() {
+            document.getElementById('importResult').style.display = 'none';
+        }
+
+        function startProgressAnimation() {
+            let progress = 0;
+            return setInterval(() => {
+                progress += 5;
+                if (progress <= 90) {
+                    updateProgress(progress);
+                }
+            }, 200);
+        }
+
+        function disableImportButtons() {
+            const importBtn = document.getElementById('importBtn');
+            const validateBtn = document.getElementById('validateBtn');
+            
+            importBtn.disabled = true;
+            importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+            validateBtn.disabled = true;
+        }
+
+        function enableImportButtons() {
+            const importBtn = document.getElementById('importBtn');
+            const validateBtn = document.getElementById('validateBtn');
+            
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<i class="fas fa-file-import"></i> Import Data';
+            validateBtn.disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+    
+    <!-- Additional page-specific scripts -->
+    <script>
+        // Sidebar toggle
+        document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('expanded');
+        });
+
         // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
             if (confirm('Are you sure you want to logout?')) {
                 window.location.href = '../logout.php';
             }
         });
-
-        // Load initial stats
-        loadStats();
     </script>
 </body>
 </html>
